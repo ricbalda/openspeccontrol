@@ -9,6 +9,7 @@ import type {
   SpecSummary,
   LifecycleAction,
   LoggedEvent,
+  MenuAction,
   RepoInfo,
   ReviewComment,
   ReviewRound,
@@ -157,6 +158,7 @@ const appendEvent = (list: LoggedEvent[], e: LoggedEvent) =>
 let refreshTimer: ReturnType<typeof setTimeout> | undefined
 function onServer(m: ServerMsg) {
   if (m.type === 'error') return toast(m.message, 'error')
+  if (m.type === 'menu') return menuAction(m.action) // Fase 4: menú nativo → renderer
   if (m.repo !== get().repo) return
   switch (m.type) {
     case 'session':
@@ -587,3 +589,20 @@ export function setTheme(t: 'light' | 'dark' | 'system') {
 }
 export const initialTheme = () =>
   (ls.get('theme') as 'light' | 'dark' | 'system' | null) ?? 'system'
+
+/** Menu actions (ServerMsg 'menu', Fase 4.6). Fase 5 sustituye 'add-folder' por el
+ *  selector nativo (pickFolder) y cablea 'demo-repo' (5.7) y 'open-data-folder' (5.8);
+ *  Fase 6 'dependency-diagnostics' (6.4); Fase 9 'check-updates' (9.4). */
+export function menuAction(action: MenuAction) {
+  switch (action) {
+    case 'add-folder':
+      openAddFolder(true)
+      break
+    case 'rescan-repos':
+      loadRepos(true)
+      break
+    default:
+      // marcador para Fases 5/6/9: la acción llegó, su implementación aún no existe
+      toast(`Acción de menú «${action}» pendiente de su fase`)
+  }
+}
