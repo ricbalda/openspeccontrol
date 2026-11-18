@@ -1,8 +1,13 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { createOscCore, type OscCore } from './core/osc-core.ts'
 import { registerIpc, type IpcBridge } from './ipc.ts'
+import {
+  applySessionSecurity,
+  applyWindowSecurity,
+  secureWebPreferences
+} from './desktop/security.ts'
 
 // Fase 2: the core is created at startup (data dir, Studio import, db) and shut
 // down on quit (agents, watchers, WAL checkpoint). Fase 3 registers the IPC
@@ -20,10 +25,12 @@ function createWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(import.meta.dirname, '../preload/index.cjs'),
-      sandbox: true
+      ...secureWebPreferences,
+      preload: join(import.meta.dirname, '../preload/index.cjs')
     }
   })
+  // Fase 7: no webview, no window.open, no navigation away from the app page
+  applyWindowSecurity(mainWindow.webContents)
   // the bridge only trusts this window, and drops its subscriptions on
   // reload / destroy / renderer crash (the core then stops idle watchers)
   bridge?.attachWindow(mainWindow)
@@ -44,6 +51,8 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Fase 7: deny-by-default permissions for the session the window uses
+  applySessionSecurity(session.defaultSession)
   core = createOscCore({ version: app.getVersion() })
   bridge = registerIpc({ core, window: () => mainWindow })
   createWindow()
