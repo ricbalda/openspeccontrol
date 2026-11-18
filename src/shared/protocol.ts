@@ -250,6 +250,18 @@ export interface LoggedEvent {
   event: AgentEvent
 }
 
+/**
+ * Native menu actions (Fase 4): the menu lives in the main process and its
+ * clicks reach the renderer as ServerMsg { type: 'menu', action }.
+ */
+export type MenuAction =
+  | 'add-folder' // Archivo → Añadir carpeta… (Fase 5 lo cambia al diálogo nativo)
+  | 'rescan-repos' // Archivo → Volver a escanear repos
+  | 'demo-repo' // Ayuda → Crear repositorio de demostración… (Fase 5, tarea 5.7)
+  | 'dependency-diagnostics' // Ayuda → Diagnóstico de dependencias (Fase 6, tarea 6.4)
+  | 'open-data-folder' // Ayuda → Abrir carpeta de datos (Fase 5, tarea 5.8)
+  | 'check-updates' // Ayuda → Buscar actualizaciones… (Fase 9, tarea 9.4)
+
 export type ServerMsg =
   | { type: 'session'; repo: string; session: SessionState | null }
   | { type: 'event'; repo: string; entry: LoggedEvent }
@@ -257,6 +269,7 @@ export type ServerMsg =
   | { type: 'artifacts_changed'; repo: string; path: string }
   | { type: 'review_changed'; repo: string; change: string }
   | { type: 'error'; message: string }
+  | { type: 'menu'; action: MenuAction }
 
 export type ClientMsg =
   | { type: 'subscribe'; repo: string }
