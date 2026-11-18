@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { runCmd } from './proc.ts'
-import { REVIEW_FILE } from './review/repoFile.ts'
+import { LEGACY_REVIEW_FILE, REVIEW_FILE } from './review/repoFile.ts'
 import type {
   ArtifactStatus,
   OptionalWorkflow,
@@ -141,7 +141,9 @@ export function openspecSignature(repoAbs: string): string {
       return
     }
     for (const e of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-      if (e.name === REVIEW_FILE) continue // OpenSpecControl's own file: the CLI's answer doesn't depend on it
+      // our own review files: the CLI's answer doesn't depend on them (the legacy
+      // one belongs to Studio and we never rewrite it, but it must not count either)
+      if (e.name === REVIEW_FILE || e.name === LEGACY_REVIEW_FILE) continue
       const full = path.join(dir, e.name)
       try {
         const st = fs.statSync(full)
