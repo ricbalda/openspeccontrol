@@ -48,6 +48,7 @@ import { FileDiffCard } from '../review/DiffView.tsx'
 import { ReadOnlyDoc } from './ReadOnlyDoc.tsx'
 import { gwtKeyword, headingKind, markGwt, markRfc } from '../review/specMarkup.tsx'
 import { ArchivedView } from './ArchivedView.tsx'
+import { MissingToolsNote } from './ToolsDialog.tsx'
 import { ValidationPanel } from '../review/ValidationPanel.tsx'
 import { artifactOfFile, StalePanel } from '../review/StalePanel.tsx'
 
@@ -710,6 +711,8 @@ export function DocReview() {
             </button>
           ))}
         </div>
+        {/* Fase 6: warn when the external CLIs this screen needs are missing */}
+        <MissingToolsNote />
         <Button
           variant="primary"
           size="lg"
