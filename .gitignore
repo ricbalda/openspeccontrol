@@ -1,0 +1,11 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+
+.claude/
+.agents/
+.backup-fix-npm/
+Docs/

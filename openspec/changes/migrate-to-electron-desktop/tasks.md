@@ -1,0 +1,149 @@
+# Tasks
+
+Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). Cada fase termina con su criterio de aceptación. Rutas de origen relativas a `../../openspec-studio`.
+
+## 0. Spike de validación (M)
+
+- [ ] 0.1 Conectar con el remoto, que no está vacío (`Initial commit` con solo `LICENSE`): `git init -b main`, `git remote add origin https://github.com/ricbalda/openspeccontrol.git`, `git fetch origin` y `git checkout -b main --track origin/main`; hacer un primer commit con el scaffold (más `Docs/` y `openspec/`) sin publicar y crear la rama `spike/electron-45` — verificación: `git log --oneline` muestra `Initial commit` y debajo el commit del scaffold, `git status -sb` indica `main...origin/main [ahead 1]` y `git branch` lista la rama
+- [ ] 0.2 En esa rama: subir `electron` a 45.3.4, poner `"type": "module"`, forzar el preload a CJS (`build.rolldownOptions.output.format: 'cjs'`) y activar `sandbox: true` — verificación: `npm run dev` abre la ventana, `window.osc`/`contextBridge` de prueba responde y el `main` del `package.json` apunta al archivo generado
+- [ ] 0.3 Con `electron-builder --dir`, comprobar en Windows, macOS y Linux `node:sqlite` con WAL, `chokidar` 6, `cross-spawn` (`npx --version`, `openspec --version`, `git --version`) y `killTree` — verificación: tabla de resultados por sistema operativo con las cuatro pruebas en verde
+- [ ] 0.4 Lanzar la app empaquetada desde el Finder/escritorio en macOS y Linux y comprobar el `PATH` — verificación: resultado documentado de si faltan las rutas de nvm/volta/homebrew
+- [ ] 0.5 Confirmar el auto-update de electron-updater 6.8 con `deb` en Linux — verificación: resultado documentado (viable o aviso de nueva versión)
+- [ ] 0.6 Registrar los resultados en la sección "Hallazgos del spike" de `design.md` y fusionar en `main` los ajustes de 0.2 — verificación: la sección deja de tener marcadores "pendiente" y `main` contiene la config del spike
+- [ ] 0.7 Aceptación de la fase — verificación: las comprobaciones 0.2–0.5 están documentadas, cada una con resultado por sistema operativo
+
+## 1. Incorporar el código de Studio y adoptar la estructura de OpenSpecControl (M)
+
+- [ ] 1.1 Copiar `server/src/*` (sin `index.ts` ni `security.ts`) → `src/main/core/`, `updates.ts` → `src/main/desktop/updater.ts`, `shared/` → `src/shared/`, `web/src` → `src/renderer/src`, `web/index.html` → `src/renderer/index.html`, `server/test` → `test/main` (sin `security.test.ts`), `web/test` → `test/renderer` y `scripts/demo-repo.mjs` → `scripts/`; retirar el código de ejemplo de la plantilla — verificación: los archivos existen en destino y `Versions.tsx`, `electron.svg` y el `ping` ya no
+- [ ] 1.2 Dejar un solo `package.json`: `name: openspeccontrol`, `productName: OpenSpecControl`, versión 0.1.0, `description`, `author` y `homepage` reales, `dependencies` solo con lo que usa el main, resto en `devDependencies`, `"type": "module"`, conservar `allowScripts` y `.npmrc` vacío — verificación: `npm install` termina sin errores y `npm ls --depth=0` lista las dependencias esperadas
+- [ ] 1.3 Configurar `electron.vite.config.ts` (main con alias `@shared`; preload CJS con `externalizeDeps: false`; renderer con `react()`, `tailwindcss()`, alias `@renderer`/`@shared`, `base: './'` y polling en `/mnt/`) — verificación: `npx electron-vite build` genera `out/main`, `out/preload/index.cjs` y `out/renderer`
+- [ ] 1.4 Sustituir los imports relativos `../../shared/...` por `@shared/...` en main, preload, renderer y tests — verificación: `grep -r "../../shared" src test` no devuelve resultados y `npm run typecheck` pasa
+- [ ] 1.5 Aplicar la identidad de la tabla 1.1 del plan (`OSC_*`, `OSC_VERSION`, `~/.openspeccontrol`, `openspeccontrol.db`, `clientInfo.name`, `<title>` y textos visibles) — verificación: `grep -rni studio src test scripts` solo muestra las referencias intencionadas al formato heredado
+- [ ] 1.6 Configurar TypeScript: `tsconfig.node.json` (main, preload, shared, `test/main`), `tsconfig.web.json` (renderer, shared, `test/renderer`, `src/preload/*.d.ts`) y `tsconfig.json` con referencias, manteniendo `allowImportingTsExtensions` — verificación: `npm run typecheck` pasa
+- [ ] 1.7 Configurar Vitest con `test.projects` (`main` en node con `OSC_DATA` temporal; `renderer` con jsdom por archivo) — verificación: `npm test` ejecuta ambos proyectos y los tests copiados pasan
+- [ ] 1.8 Aplicar ESLint + Prettier: incluir `test/` y `scripts/`, ignorar `out/`, `dist/` y `release/`, ejecutar `npm run format` en un commit propio y corregir lo que reporte el lint; añadir `out/` y `release/` a `.gitignore` — verificación: `npm run lint` pasa y el commit de formato no contiene cambios de lógica
+- [ ] 1.9 Definir los scripts `dev`, `start`, `build`, `typecheck`, `test`, `lint`, `format` y `demo-repo` — verificación: cada script se ejecuta sin errores de configuración
+- [ ] 1.10 Dejar `src/main/index.ts` mínimo: abre un `BrowserWindow` que carga el renderer (`ELECTRON_RENDERER_URL` o `loadFile`) — verificación: `npm run dev` muestra la interfaz sin datos
+- [ ] 1.11 Revisar `.vscode/launch.json` para el main en ESM — verificación: "Debug All" se conecta al main y al renderer
+- [ ] 1.12 Conservar la atribución de licencia: mantener el `LICENSE` MIT propio del remoto (© Ricardo Balda), añadir `NOTICE` con el aviso MIT completo de OpenSpec Studio (© Fridayana Baabullah), incluir ambos en el paquete y poner `"license": "MIT"` en `package.json` — verificación: `NOTICE` existe con el texto íntegro, `package.json` declara la licencia y los dos archivos aparecen en el paquete de `electron-builder --dir`
+- [ ] 1.13 Aceptación de la fase — verificación: `npm run dev` abre la ventana con la UI (sin datos) y `typecheck`, `lint` y `test` están en verde (salvo los tests que dependan de `index.ts`, que se recuperan en la Fase 2)
+
+## 2. Extraer el núcleo `OscCore` e importación desde Studio (L)
+
+- [ ] 2.1 Crear `src/main/core/osc-core.ts` con la clase `OscCore` y un método por operación, moviendo la lógica de los handlers de `server/src/index.ts` (`validChange`, `gitScope`, `agentBusy`, `listRepos`, comando de ciclo de vida, cierre de ronda, historial de archivados, export/import de revisión) — verificación: los métodos existen y `npm run typecheck` pasa
+- [ ] 2.2 Introducir `OscError(code, message)` en lugar de `c.json({error}, status)` — verificación: ningún módulo del núcleo importa `hono` y los errores llevan código `invalid | not_found | conflict | too_large | internal`
+- [ ] 2.3 Llevar a `OscCore` el reparto en tiempo real con `Subscriber { id; send }`: `subscribe/unsubscribe`, `broadcast`, `syncWatcher`, debounce de `artifacts_changed`, `reviewChanged`/`exportReview` y `handleClientMsg(sub, msg)` — verificación: test de `subscribe` que recibe `session` + `replay`
+- [ ] 2.4 Pasar a funciones de arranque explícitas `openDb(path)`, `initDataDir(dir)`, `loadWorkspaceConfig()`, `migrateLegacy(REPOS_ROOT)` y `closeStaleRounds`, orquestadas por `createOscCore({ dataDir, version, env })` — verificación: importar un módulo del núcleo no abre la base ni crea directorios
+- [ ] 2.5 Añadir `OscCore.shutdown()` (`hub.stopAll()`, cancelar debounces, cerrar watchers, `db.close()`) — verificación: test que tras `shutdown()` no quedan watchers ni procesos hijo y el WAL está sin checkpoint pendiente
+- [ ] 2.6 Implementar `src/main/core/legacy-import.ts` → `importFromStudio({ from, to })` con `VACUUM INTO` desde conexión de solo lectura, copia de `config.json` y `agents.json`, marca `imported-from-studio.json` y origen intacto — verificación: `legacy-import.test.ts` cubre importa una vez, no repite, no toca el origen y tolera origen ausente o corrupto
+- [ ] 2.7 Cambiar el archivo de revisión: `REVIEW_FILE = '.openspeccontrol-review.json'`, `FORMAT = 'openspeccontrol-review'`, lectura de respaldo de `.studio-review.json`, escritura solo del nombre nuevo e ignorar ambos en la firma de artefactos — verificación: `repoFile.test.ts` cubre la lectura de respaldo y la exportación
+- [ ] 2.8 En `src/main/index.ts`, crear `OscCore` al arrancar y llamar a `core.shutdown()` al salir — verificación: arrancar y cerrar la app no deja procesos ni archivos `-wal` abiertos
+- [ ] 2.9 Escribir `osc-core.test.ts`: comentario en cambio inexistente → `invalid`, `sendReview` sin agente → `conflict`, `action` en repo fuera de las carpetas → `not_found`, `subscribe` → `session` + `replay`, `removeRoot` detiene agentes inalcanzables — verificación: `npm test` pasa con esos casos
+- [ ] 2.10 Aceptación de la fase — verificación: `npm test`, `npm run typecheck` y `npm run lint` en verde
+
+## 3. Puente IPC y cambio de transporte en el renderer (L)
+
+- [ ] 3.1 Crear `src/shared/ipc.ts` con `interface OscApi`, canales (`osc:<método>`, `osc:client-msg`, `osc:server-msg`), `IpcResult<T>` y códigos de error — verificación: `npm run typecheck` pasa y la tabla 4.2 del plan está cubierta método a método
+- [ ] 3.2 Crear `src/main/ipc.ts`: un `ipcMain.handle` por método con `isTrustedSender`, validación zod y envelope sin excepciones — verificación: `ipc.test.ts` cubre el envelope de éxito y de error
+- [ ] 3.3 Registrar `ipcMain.on('osc:client-msg')` validando con `clientMsg` y enviando por `webContents.send('osc:server-msg')` solo a contenidos no destruidos — verificación: test con un `webContents` simulado
+- [ ] 3.4 Limpiar suscripciones en `did-start-navigation`, `destroyed` y `render-process-gone` y llamar a `syncWatcher` por repo afectado — verificación: test que tras destruir el renderer el watcher del repo se detiene
+- [ ] 3.5 Crear `src/preload/index.ts` con `contextBridge.exposeInMainWorld('osc', api)`, una función explícita por método y `onMessage` que devuelve la baja; declarar `window.osc: OscApi` en `index.d.ts` (reemplaza `window.electron` y `window.api`) — verificación: `window.osc` está disponible en el renderer y no hay `invoke` genérico expuesto
+- [ ] 3.6 Reimplementar `src/renderer/src/lib/api.ts` sobre `window.osc` conservando las firmas — verificación: `api.test.ts` con un `window.osc` simulado
+- [ ] 3.7 En `store.ts`, reemplazar `connectWs`/`wsSend`/reintentos por `window.osc.onMessage` y `window.osc.send`; eliminar `wsUp` y `connectedOnce` — verificación: recargar la ventana recupera el repo y el transcript
+- [ ] 3.8 Quitar el badge "server offline" de `App.tsx` — verificación: `grep -r "offline" src/renderer` no encuentra el badge
+- [ ] 3.9 Eliminar la ruta y el tipo `browse` y cualquier `fetch`/`WebSocket` del renderer — verificación: `grep -rE "fetch\(|WebSocket|BrowseResult" src/renderer` sin resultados
+- [ ] 3.10 Escribir `ipc.test.ts` para `isTrustedSender` (acepta el frame principal; rechaza iframe, otro `webContents` y otra URL) y para el envelope de errores — verificación: `npm test` pasa con esos casos
+- [ ] 3.11 Aceptación de la fase — verificación: con `npm run dev` funciona el recorrido del Walkthrough del README de Studio (añadir carpeta, inicializar, conectar agente, proponer, revisar con comentarios, enviar ronda, construir, commit, archivar), los datos de un `~/.openspec-studio` existente aparecen importados y `netstat` no muestra puertos TCP abiertos por la app
+
+## 4. Shell de escritorio: ventana, ciclo de vida y menú (M)
+
+- [ ] 4.1 Activar `app.requestSingleInstanceLock()` y el evento `second-instance` — verificación: abrir la app dos veces enfoca la misma ventana y deja un solo proceso
+- [ ] 4.2 Implementar `desktop/window-state.ts` (tamaño, posición y maximizado en `~/.openspeccontrol/window-state.json`, comprobando `screen.getAllDisplays`, mínimo 1024×640) — verificación: test de restauración con monitor presente y ausente, y comprobación manual al reabrir
+- [ ] 4.3 Mostrar la ventana con `show: false` + `ready-to-show` y `backgroundColor` según `nativeTheme.shouldUseDarkColors` — verificación: no hay destello blanco al arrancar con tema oscuro
+- [ ] 4.4 Implementar el cierre seguro en `close` (Windows/Linux) y `before-quit` con `dialog.showMessageBox` si hay sesión `busy` o `pendingInteractions > 0`, seguido de `await core.shutdown()` y `app.exit(0)` — verificación: con un agente `busy`, "Cancelar" mantiene la app y "Cerrar igual" no deja procesos huérfanos en el Administrador de tareas / `ps`
+- [ ] 4.5 Aplicar el ciclo de vida por plataforma: macOS no sale en `window-all-closed` y `activate` recrea la ventana; Windows/Linux salen tras 4.4 — verificación: en macOS cerrar y reabrir desde el dock muestra el `replay`
+- [ ] 4.6 Implementar `desktop/menu.ts` (Archivo, Editar con roles, Ver sin DevTools si está empaquetada, Ventana, Ayuda) y el `ServerMsg` de tipo `menu` en `protocol.ts`; quitar `autoHideMenuBar` — verificación: `Cmd/Ctrl+C` y `V` funcionan en los inputs y las acciones del menú llegan al renderer
+- [ ] 4.7 Gestionar `render-process-gone` y `unresponsive`: registrar el motivo y ofrecer recargar — verificación: simular la caída del renderer y comprobar que la recarga recupera el transcript
+- [ ] 4.8 Fijar `app.setAppUserModelId('io.github.ricbalda.openspeccontrol')` y `app.setName('OpenSpecControl')` — verificación: las notificaciones y el icono de la barra de tareas en Windows muestran "OpenSpecControl"
+- [ ] 4.9 Aceptación de la fase — verificación: abrir dos veces enfoca la misma ventana, el tamaño y la posición persisten y cerrar con un agente `busy` pide confirmación sin dejar procesos huérfanos
+
+## 5. Integraciones nativas (M)
+
+- [ ] 5.1 Implementar `pickFolder()` en el main con `dialog.showOpenDialog` (`openDirectory`, `createDirectory`) que llama a `core.addRoot(path)` y devuelve `Workspace` o `null` — verificación: test con el diálogo simulado (elegir, cancelar, raíz de disco) y prueba manual
+- [ ] 5.2 Reemplazar `AddFolderDialog`: el botón y el menú llaman a `pickFolder()`, conservando la entrada de ruta escrita con `~` — verificación: añadir una carpeta por diálogo y por ruta escrita
+- [ ] 5.3 Implementar el método IPC `notify({ title, body, kind })` con `Notification` solo si la ventana no tiene foco, clic que enfoca y `flashFrame` para `attention`; eliminar `Notification.requestPermission` del renderer — verificación: con la ventana en segundo plano aparece la notificación y el clic trae la app al frente
+- [ ] 5.4 Reflejar `pendingInteractions` en `app.setBadgeCount` (macOS/Linux) y `win.setOverlayIcon` (Windows) — verificación: el contador sube y baja con las decisiones pendientes y desaparece en cero
+- [ ] 5.5 Añadir el componente `a` a los renderers de markdown que llama a `window.osc.openExternal(url)` (solo `http:`, `https:`, `mailto:`), `setWindowOpenHandler` en `deny` y `will-navigate` con `preventDefault()` — verificación: un enlace `https://` abre el navegador y la ventana no navega; `file:` y `javascript:` no hacen nada
+- [ ] 5.6 Llamar a `window.osc.setNativeTheme(t)` desde `setTheme()` para fijar `nativeTheme.themeSource` — verificación: la barra de título y los menús siguen el tema elegido
+- [ ] 5.7 Portar `scripts/demo-repo.mjs` a `src/main/desktop/demo-repo.ts` con E/S asíncrona y exponerlo en Ayuda → Crear repositorio de demostración — verificación: crea el repo, añade la carpeta y selecciona `add-hello-endpoint` sin bloquear la UI
+- [ ] 5.8 Añadir "Abrir carpeta de datos" (`shell.openPath`) y "Mostrar en el explorador" (`shell.showItemInFolder`) — verificación: ambas opciones abren la ubicación correcta
+- [ ] 5.9 Aceptación de la fase — verificación: añadir una carpeta con el diálogo nativo en los 3 sistemas operativos, notificaciones con la ventana en segundo plano que llevan a la app al hacer clic y enlaces `https://` que abren el navegador sin navegar la ventana
+
+## 6. Entorno de ejecución: PATH, variables y diagnóstico (M)
+
+- [ ] 6.1 Implementar `desktop/shell-env.ts`: en macOS/Linux, antes de crear `OscCore`, ejecutar `$SHELL -ilc` con delimitadores y timeout de unos 5 s, fusionar `PATH`, proxy y variables `OSC_*`/`OPENSPEC_*`/`REPOS_ROOT`/`DEFAULT_AGENT` y, si falla, añadir rutas conocidas — verificación: `shell-env.test.ts` cubre el parseo con delimitadores, el timeout y el fallback
+- [ ] 6.2 Conservar el reflejo de `http_proxy`/`https_proxy`/`no_proxy` en mayúsculas para los agentes (`agentEnv` en `hub.ts`) — verificación: test que el entorno del agente trae las variables en ambos casos
+- [ ] 6.3 Implementar `desktop/tools.ts` para detectar `node`, `npx`, `openspec` (`OPENSPEC_BIN`) y `git` y exponer `config().tools` (`ToolStatus`) — verificación: `tools.test.ts` con herramientas presentes y ausentes
+- [ ] 6.4 Mostrar el aviso con `npm install -g @fission-ai/openspec` en "Set up OpenSpec" y en el panel del agente, y añadir el diálogo Ayuda → Diagnóstico de dependencias — verificación: con `openspec` desinstalado el diagnóstico lo marca con el comando
+- [ ] 6.5 Tratar WSL como carpeta de red: mantener el polling de chokidar para `/mnt/*` y documentar `\\wsl$\…` — verificación: añadir un repo en `\\wsl.localhost\…` y listar sus cambios
+- [ ] 6.6 Aceptación de la fase — verificación: en macOS y Linux, al abrir la app desde el dock/lanzador, encuentra `openspec`, `npx` y `git` instalados con nvm, volta o homebrew
+
+## 7. Endurecimiento de seguridad (S–M)
+
+- [ ] 7.1 Fijar `webPreferences`: `contextIsolation`, `sandbox`, sin `nodeIntegration`, `webSecurity`, `spellcheck: false`, `navigateOnDragDrop: false` — verificación: `window.process` y `require` no existen en la consola del renderer
+- [ ] 7.2 Completar la CSP de `src/renderer/index.html` y comprobar el HMR; si no funciona, inyectar una variante para desarrollo — verificación: `npm run dev` con HMR y la consola sin violaciones de CSP
+- [ ] 7.3 Denegar permisos salvo `clipboard-sanitized-write` (`setPermissionRequestHandler` y `setPermissionCheckHandler`) y bloquear `will-attach-webview` y ventanas nuevas — verificación: test o comprobación manual de que otros permisos se deniegan
+- [ ] 7.4 Mantener `repoPath()`, `safeResolve` (para `file()` y el sandbox de ACP), `validChange`, `MAX_DOC_BYTES` y `capped()` — verificación: pasan `sandbox.test.ts`, `schemas.test.ts` y los demás tests del núcleo
+- [ ] 7.5 Configurar los fuses de Electron (`RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` desactivados; `EnableEmbeddedAsarIntegrityValidation`, `OnlyLoadAppFromAsar` activados) — verificación: `npx @electron/fuses read` sobre el paquete muestra los valores esperados y lanzar la app instalada con `ELECTRON_RUN_AS_NODE=1` arranca la aplicación normal, no un intérprete de Node.js
+- [ ] 7.6 Escribir la sección Security del README — verificación: describe sin puerto ni autenticación de red, IPC validado y permisos de los agentes
+- [ ] 7.7 Aceptación de la fase — verificación: checklist de seguridad de Electron revisada punto por punto en `design.md`, consola del renderer sin advertencias de seguridad y tests de `isTrustedSender` en verde
+
+## 8. Empaquetado y firma (L)
+
+- [ ] 8.1 Generar `build/icon.png` y `resources/icon.png` de 1024×1024 (favicon de Studio o icono propio) — verificación: electron-builder deriva ICO e ICNS sin errores
+- [ ] 8.2 Configurar `electron-builder.yml`: `appId: io.github.ricbalda.openspeccontrol`, `productName: OpenSpecControl`, `win.executableName: openspeccontrol`, `directories.output: release/${version}`, `files` (solo `out/**` y `package.json`), `asar: true`, `asarUnpack: resources/**` y `publish` (github, `ricbalda/openspeccontrol`); quitar los permisos de cámara, micrófono, Documentos y Descargas de `mac.extendInfo` y nombrar los instaladores con el nombre visible (`artifactName: ${productName}-${version}-setup.${ext}` en NSIS, `${productName}-${version}.${ext}` en dmg y AppImage) — verificación: `npx electron-builder --dir` genera el paquete en `release/0.1.0` y `npm run dist:win` produce `OpenSpecControl-0.1.0-setup.exe`
+- [ ] 8.3 Configurar Windows: NSIS por usuario (`perMachine: false`, `oneClick: true`), x64 + arm64 y firma (Azure Trusted Signing o certificado) — verificación: el instalador se ejecuta sin pedir administrador y `Get-AuthenticodeSignature` es válido
+- [ ] 8.4 Configurar macOS: dmg + zip universales, `hardenedRuntime`, `entitlements.mac.plist` y notarización — verificación: `spctl -a -vv` acepta la app y `xcrun stapler validate` pasa
+- [ ] 8.5 Configurar Linux: AppImage + deb (categoría `Development`, x64 + arm64, `maintainer` real) y quitar `snap` — verificación: ambos paquetes se generan y se instalan en una distribución de prueba
+- [ ] 8.6 Definir los scripts `dist`, `dist:win`, `dist:mac`, `dist:linux` y `dist:dir` en lugar de `build:win`, `build:mac`, `build:linux` y `build:unpack` — verificación: `npm run dist:dir` termina sin errores
+- [ ] 8.7 Comprobar el contenido del paquete — verificación: no incluye `src/`, `test/`, `Docs/`, `openspec/` ni `devDependencies`, y el instalador pesa entre ~90 y ~120 MB
+- [ ] 8.8 Aceptación de la fase — verificación: instaladores firmados que se instalan sin advertencias de firma y la app instalada pasa el recorrido de la Fase 3
+
+## 9. Actualización automática (M)
+
+- [ ] 9.1 Implementar `desktop/updater.ts` sobre `electron-updater` (desactivado si `!app.isPackaged` o `OSC_NO_UPDATE_CHECK=1`; al arrancar y cada 24 h; `autoDownload` y `autoInstallOnAppQuit`) y revisar `dev-app-update.yml` — verificación: en modo desarrollo el estado es `disabled`
+- [ ] 9.2 Cambiar `UpdateInfo` por `UpdateState` en `protocol.ts` y emitirlo como `ServerMsg` `update_state` — verificación: `npm run typecheck` pasa y el renderer recibe los cambios de estado
+- [ ] 9.3 Reescribir `UpdatePill` ("Descargando x.y.z (n %)" → "Reiniciar para actualizar a x.y.z") con la confirmación de cierre seguro y `quitAndInstall()`, conservando "ocultar hasta la próxima versión" — verificación: con un agente `busy` aparece la confirmación antes de reiniciar
+- [ ] 9.4 Implementar Ayuda → Buscar actualizaciones con el resultado, incluido "Ya tienes la última versión" — verificación: la acción muestra un mensaje en cada estado
+- [ ] 9.5 Reescribir `updates.test.ts` como `updater.test.ts` sobre la máquina de estados, incluida la regla de versión preliminar con `isNewer` — verificación: `npm test` pasa con los casos de estado y de versión preliminar
+- [ ] 9.6 Aceptación de la fase — verificación: con un release de borrador `0.1.1-test` en `ricbalda/openspeccontrol`, la 0.1.0 instalada en los 3 sistemas operativos lo descarga, lo ofrece y se actualiza al reiniciar
+
+## 10. CI/CD (M)
+
+- [ ] 10.1 Crear `.github/workflows/ci.yml` (matriz ubuntu/windows/macos × Node 22 y 24: `npm ci` → `lint` → `typecheck` → `test` → `electron-vite build` → `dist:dir`, con `xvfb-run` en Linux) — verificación: un PR ejecuta la matriz completa en verde
+- [ ] 10.2 Añadir el arranque de prueba en la CI con `--remote-debugging-port` (existe `#root` y no hay errores de consola) — verificación: el job falla si la app no carga y pasa si carga
+- [ ] 10.3 Crear `.github/workflows/release.yml` con tags `v*`, firma y notarización y release en borrador con los artefactos y los `latest*.yml` — verificación: un tag de prueba genera el borrador con los instaladores de las 3 plataformas
+- [ ] 10.4 Documentar en el README (sección Development) cómo crear un release — verificación: una persona ajena al proyecto puede seguir los pasos hasta el borrador
+- [ ] 10.5 Aceptación de la fase — verificación: un PR ejecuta la matriz completa en verde y un tag de prueba genera el release en borrador con los 3 instaladores
+
+## 11. Verificación funcional completa (M)
+
+- [ ] 11.1 Confirmar que los tests del núcleo conservados (`agents`, `anchor`, `changes-cache`, `git`, `repoFile`, `review`, `round`, `sandbox`, `schemas`, `specs`, `usage`, `workspace` sin `browse`) y del renderer (`columnResizer`, `relative`, `specMarkup`, `textModel`, `transcript`, `usage`) pasan en los 3 sistemas — verificación: la matriz de CI en verde
+- [ ] 11.2 Confirmar que los tests nuevos de cada fase existen y pasan (`osc-core`, `legacy-import`, `ipc`, `updater`, `shell-env`, `tools`) — verificación: `npm test` los lista y pasan
+- [ ] 11.3 Ejecutar el E2E de humo con agent-browser por CDP (`electron . --remote-debugging-port=9222`, `REPOS_ROOT` en un repo de demo y `OSC_DATA` temporal): rail → abrir `add-hello-endpoint` → comentario → recargar → comentario anclado → cambiar tema → captura — verificación: el escenario completo pasa y deja la captura
+- [ ] 11.4 Completar la matriz manual Windows/macOS/Linux × agente (CodeBuddy, Claude Code, Codex, opencode): conectar y reanudar, Propose, Send review, permisos y elicitation, Build, Verify, Sync, Archive, historial, specs principales, validación y artefactos desactualizados, rama y commit, `.openspeccontrol-review.json` (y lectura de `.studio-review.json`), `agents.json` en caliente e importación de una instalación de Studio 0.3.x — verificación: cada punto marcado por sistema operativo en el checklist
+- [ ] 11.5 Medir el rendimiento: sesión de más de 2000 eventos sin bloquear la UI y rail en menos de 2 s con una base grande — verificación: mediciones registradas y dentro del umbral
+- [ ] 11.6 Aceptación de la fase — verificación: todos los puntos de 11.4 marcados por sistema operativo
+
+## 12. Documentación (S–M)
+
+- [ ] 12.1 Alinear el `README.md` (ya renombrado a OpenSpecControl) con la arquitectura final: corregir lo que hoy contradice el plan (servidor local, Hono/WebSocket/Biome en el stack, roadmap web-primero, requisito de Node 24 por `node:sqlite`, adaptadores empaquetados), añadir CodeBuddy, dejar Orca y el tablero multi-cambio como roadmap posterior y añadir Quick start con instaladores, prerrequisitos, diagrama IPC, `OSC_*`, plataformas, troubleshooting, seguridad, desarrollo, "What OpenSpecControl writes" (`~/.openspeccontrol` y el `userData` de Electron) y licencia/créditos a OpenSpec Studio — verificación: `grep -ri "openspecmonitor\|Hono\|Biome" README.md` sin resultados y el Quick start se sigue en una máquina limpia
+- [ ] 12.2 Actualizar `CLAUDE.md` (comandos, arquitectura main/preload/renderer/core, contrato `window.osc`, nombres de la tabla 1.1 y reglas de seguridad) — verificación: ya no describe la plantilla ni `window.api`
+- [ ] 12.3 Regenerar las capturas de `Docs/img/*.png` sobre la app de escritorio — verificación: las imágenes enlazadas en el README existen
+- [ ] 12.4 Añadir la nota de migración desde OpenSpec Studio (importación automática, `STUDIO_*` → `OSC_*`, convivencia de archivos de revisión, no usar ambas apps sobre el mismo repo) — verificación: la nota aparece en el README
+- [ ] 12.5 Aceptación de la fase — verificación: el README no menciona `npm install -g openspec-studio`, el puerto 3940 ni `STUDIO_*`, salvo en la nota de migración
+
+## Workflow follow-up
+
+- Revisar la propuesta con `/opsx:verify` antes de archivar.
+- Archivar el cambio con `/opsx:archive` cuando se cumplan los criterios de aceptación de las Fases 0–12.

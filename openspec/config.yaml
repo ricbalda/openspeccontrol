@@ -1,0 +1,28 @@
+schema: spec-driven
+
+context: |
+  OpenSpecControl migra OpenSpec Studio 0.3.1 a una app de escritorio Electron 45 + electron-vite 6
+  + React 19. El código de Studio está en ../../openspec-studio y solo se usa para leer.
+  El plan de referencia es Docs/plan-migracion-electron.md: sus decisiones D1–D11 ya están tomadas.
+  Identidad: nombre visible "OpenSpecControl", paquete y ejecutable "openspeccontrol", versión 0.1.0,
+  appId io.github.ricbalda.openspeccontrol, releases en GitHub ricbalda/openspeccontrol.
+  Prefijo de identificadores: "osc" (window.osc, canales IPC osc:*, OscCore, OscError, OscApi,
+  variables OSC_DATA, OSC_DB, OSC_NO_UPDATE_CHECK). No crear nombres nuevos con "studio"; solo se
+  permiten en el código de compatibilidad (legacy-import.ts y la lectura de .studio-review.json).
+  Datos del usuario en ~/.openspeccontrol (openspeccontrol.db); el archivo de revisión de cada repo
+  es .openspeccontrol-review.json. Nunca se modifica ~/.openspec-studio ni el repo openspec-studio.
+  Plataformas: Windows, macOS y Linux. Lint con ESLint + Prettier (sin Biome).
+  Escribir todos los artefactos en español.
+
+rules:
+  proposal:
+    - Citar las decisiones del plan por su número (D1–D11) en lugar de volver a discutirlas
+  specs:
+    - Usar como capacidades las de la sección 7 del plan (desktop-shell, ipc-bridge,
+      native-integrations, runtime-environment, studio-data-import, desktop-distribution, core-parity)
+  design:
+    - Incluir la sección "Hallazgos del spike" (tarea 0.6), aunque esté vacía
+    - Describir por separado el comportamiento de Windows, macOS y Linux cuando difiera
+  tasks:
+    - Seguir las fases 0–12 y la numeración de tareas del plan (0.1, 1.1, 2.6…)
+    - Cerrar cada fase con su criterio de aceptación como última tarea
