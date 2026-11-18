@@ -1,9 +1,13 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
+import { createOscCore, type OscCore } from './core/osc-core.ts'
 
-// Fase 1: minimal entry point. It only opens a window that loads the renderer;
-// the core (OscCore) and the IPC bridge are wired in Fases 2 and 3.
+// Fase 2: the core is created at startup (data dir, Studio import, db) and shut
+// down on quit (agents, watchers, WAL checkpoint). The IPC bridge arrives in
+// Fase 3; window/menu polish (single instance, safe close) in Fase 4.
+
+let core: OscCore | null = null
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -34,6 +38,7 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  core = createOscCore({ version: app.getVersion() })
   createWindow()
 
   app.on('activate', () => {
@@ -50,4 +55,15 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+// Stop agents and watchers, checkpoint the db, then really exit.
+app.on('will-quit', (e) => {
+  if (!core) return
+  e.preventDefault()
+  const c = core
+  core = null
+  c.shutdown()
+    .catch(() => {}) // the app must be able to exit even if cleanup fails
+    .finally(() => app.exit(0))
 })

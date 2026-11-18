@@ -3,12 +3,38 @@ import path from 'node:path'
 import os from 'node:os'
 import pkg from '../../../package.json' with { type: 'json' }
 
-/** The app's version, from package.json (sent to agents as clientInfo). */
-export const OSC_VERSION: string = pkg.version ?? '0.0.0'
-export const DATA_DIR = path.resolve(
-  process.env.OSC_DATA || path.join(os.homedir(), '.openspeccontrol')
-)
-fs.mkdirSync(DATA_DIR, { recursive: true })
+// Importing this module (or any core module) has no side effects: the data dir
+// is created and the version fixed by createOscCore() calling the setters below.
+
+/** The app's version (sent to agents as clientInfo); createOscCore sets it from app.getVersion(). */
+let version: string = pkg.version ?? '0.0.0'
+
+let dir: string | null = null
+
+const defaultDir = () =>
+  path.resolve(process.env.OSC_DATA || path.join(os.homedir(), '.openspeccontrol'))
+
+/** Create the data dir explicitly (createOscCore calls this first). */
+export function initDataDir(dataDir: string): string {
+  dir = path.resolve(dataDir)
+  fs.mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+/** The data dir: the one initDataDir() set, or the default (OSC_DATA / ~/.openspeccontrol) without creating it. */
+export function dataDir(): string {
+  return dir ?? defaultDir()
+}
+
+/** True once initDataDir() ran (tests use it to assert the explicit startup order). */
+export const dataDirReady = (): boolean => dir !== null
+
+export function setVersion(v: string): void {
+  version = v
+}
+
+/** The app version in use (replaces Studio's OSC_VERSION module constant). */
+export const oscVersion = (): string => version
 
 /** true if `target` is `base` or inside it (lexically). */
 export function within(base: string, target: string): boolean {

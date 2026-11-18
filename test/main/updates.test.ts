@@ -1,10 +1,14 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { DATA_DIR } from '../../src/main/core/repos.ts'
+import { initDataDir } from '../../src/main/core/repos.ts'
 import { INSTALL, isNewer, latestVersion, updateCommand } from '../../src/main/desktop/updater.ts'
 
-const CACHE = path.join(DATA_DIR, 'update-check.json')
+// the updater caches in the data dir; create it explicitly (task 2.4)
+const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-upd-'))
+initDataDir(DATA)
+const CACHE = path.join(DATA, 'update-check.json')
 const reply = (version: unknown, ok = true) => {
   const calls: string[] = []
   const f = (async (url: string) => {

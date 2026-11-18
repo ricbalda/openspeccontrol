@@ -2,7 +2,8 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { comments, rounds } from '../../src/main/core/db.ts'
+import { comments, openDb, rounds } from '../../src/main/core/db.ts'
+import { initDataDir } from '../../src/main/core/repos.ts'
 import {
   closeRound,
   createComment,
@@ -11,6 +12,12 @@ import {
   sendReview
 } from '../../src/main/core/review/service.ts'
 import type { AgentSession } from '../../src/main/core/acp/hub.ts'
+
+// explicit startup (task 2.4): modules import without side effects; the db
+// opens here, when the test says so (OSC_DB decides where)
+const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-round-data-'))
+initDataDir(DATA)
+openDb(path.join(DATA, 'openspeccontrol.db'))
 
 function setup(repo: string) {
   const abs = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-round-'))

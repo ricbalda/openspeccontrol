@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { AgentInfo, LifecycleAction } from '@shared/protocol.ts'
-import { DATA_DIR } from './repos.ts'
+import { dataDir } from './repos.ts'
 
 export interface AgentDef extends AgentInfo {
   cmd: string
@@ -69,19 +69,19 @@ const BUILTIN: AgentDef[] = [
  * [{ "id": "gemini", "label": "Gemini", "cmd": "gemini", "args": ["--experimental-acp"],
  *    "openspecTool": "gemini", "style": "slash" | "skill" | "/custom:{action} {args}" }]
  */
-const CUSTOM_FILE = path.join(DATA_DIR, 'agents.json')
+const customFile = () => path.join(dataDir(), 'agents.json')
 let customCache: { mtimeMs: number; agents: AgentDef[] } | null = null
 
 /** Read agents.json again only when it changed (agents() runs on every request and socket message). */
 function loadCustom(): AgentDef[] {
   let mtimeMs: number
   try {
-    mtimeMs = fs.statSync(CUSTOM_FILE).mtimeMs
+    mtimeMs = fs.statSync(customFile()).mtimeMs
   } catch {
     customCache = null
     return []
   }
-  if (customCache?.mtimeMs !== mtimeMs) customCache = { mtimeMs, agents: parseCustom(CUSTOM_FILE) }
+  if (customCache?.mtimeMs !== mtimeMs) customCache = { mtimeMs, agents: parseCustom(customFile()) }
   return customCache.agents
 }
 

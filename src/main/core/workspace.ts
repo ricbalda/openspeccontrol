@@ -7,14 +7,34 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { DATA_DIR, safeResolve, within } from './repos.ts'
+import { dataDir, safeResolve, within } from './repos.ts'
 
-const CONFIG = path.join(DATA_DIR, 'config.json')
-const ENV_ROOT = process.env.REPOS_ROOT ? path.resolve(process.env.REPOS_ROOT) : null
+// The config is loaded explicitly with loadWorkspaceConfig() (createOscCore does
+// it after the data dir exists); before that, roots() is simply empty.
+
+const configFile = () => path.join(dataDir(), 'config.json')
+
+let moduleEnvRoot: string | null = null
 
 interface Config {
   roots: string[]
   /** repos (ids) that keep their review history in the repo */ reviewInRepo?: string[]
+}
+
+/**
+ * Read <data>/config.json and fix the REPOS_ROOT (if any). `envRoot` overrides
+ * process.env.REPOS_ROOT; pass null to ignore it.
+ */
+export function loadWorkspaceConfig(envRoot?: string | null): void {
+  moduleEnvRoot =
+    envRoot === undefined
+      ? process.env.REPOS_ROOT
+        ? path.resolve(process.env.REPOS_ROOT)
+        : null
+      : envRoot
+        ? path.resolve(envRoot)
+        : null
+  config = readConfig() ?? { roots: [] }
 }
 
 const real = (p: string) => {
@@ -34,7 +54,7 @@ const isDir = (p: string) => {
 
 function readConfig(): Config | null {
   try {
-    const c = JSON.parse(fs.readFileSync(CONFIG, 'utf8'))
+    const c = JSON.parse(fs.readFileSync(configFile(), 'utf8'))
     const strings = (v: unknown) =>
       Array.isArray(v) ? v.filter((r: unknown): r is string => typeof r === 'string') : []
     return { roots: strings(c.roots), reviewInRepo: strings(c.reviewInRepo) }
@@ -43,17 +63,17 @@ function readConfig(): Config | null {
   }
 }
 function writeConfig(c: Config) {
-  const tmp = `${CONFIG}.${process.pid}.tmp`
+  const tmp = `${configFile()}.${process.pid}.tmp`
   fs.writeFileSync(tmp, JSON.stringify(c, null, 2))
-  fs.renameSync(tmp, CONFIG)
+  fs.renameSync(tmp, configFile())
 }
 
-let config: Config = readConfig() ?? { roots: [] }
+let config: Config = { roots: [] }
 
 /** First run with data from the old single-root setup: keep those folders so nothing disappears. */
 export function seedRoots(folders: string[]) {
   const existing = readConfig()
-  const add = folders.filter((f) => isDir(f) && (!ENV_ROOT || real(f) !== real(ENV_ROOT)))
+  const add = folders.filter((f) => isDir(f) && (!moduleEnvRoot || real(f) !== real(moduleEnvRoot)))
   if (existing && !add.length) return
   const all = [...(existing?.roots ?? [])]
   for (const f of add) if (!all.some((r) => real(r) === real(f))) all.push(f)
@@ -71,7 +91,7 @@ export function roots(): Root[] {
   const out: Root[] = []
   const seen = new Set<string>()
   for (const [p, fromEnv] of [
-    ...(ENV_ROOT ? [[ENV_ROOT, true] as const] : []),
+    ...(moduleEnvRoot ? [[moduleEnvRoot, true] as const] : []),
     ...config.roots.map((r) => [r, false] as const)
   ]) {
     const r = real(p) ?? p
@@ -259,65 +279,4 @@ export function repoPath(id: unknown): string | null {
     if (p && isDir(p)) return p
   }
   return null
-}
-
-// ---- folder browser ------------------------------------------------------------
-export interface BrowseResult {
-  path: string | null // null = top level (home + drives)
-  parent: string | null
-  entries: { name: string; path: string; repo: boolean }[]
-  truncated: boolean
-}
-
-const MAX_ENTRIES = 400
-
-function windowsDrives(): string[] {
-  if (process.platform !== 'win32') return []
-  return 'CDEFGHIJKLMNOPQRSTUVWXYZ'
-    .split('')
-    .map((d) => `${d}:\\`)
-    .filter((d) => isDir(d))
-}
-
-/** List sub-folders of `p` (or the starting places when empty). Folders only, hidden ones skipped. */
-export function browse(p: unknown): BrowseResult {
-  const home = os.homedir()
-  if (typeof p !== 'string' || !p.trim()) {
-    const places = [home, ...roots().map((r) => r.path), ...windowsDrives()]
-    const uniq = [...new Set(places)]
-    return {
-      path: null,
-      parent: null,
-      truncated: false,
-      entries: uniq.map((x) => ({ name: x === home ? `Home (${x})` : x, path: x, repo: false }))
-    }
-  }
-  const abs = real(p.trim().replace(/^~(?=$|[\\/])/, home))
-  if (!abs || !path.isAbsolute(abs) || !isDir(abs)) throw new Error('Folder not found')
-  let dirents: fs.Dirent[] = []
-  try {
-    dirents = fs.readdirSync(abs, { withFileTypes: true })
-  } catch {
-    throw new Error('Cannot read this folder')
-  }
-  const dirs = dirents
-    .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !e.name.startsWith('$'))
-    .sort((a, b) => a.name.localeCompare(b.name))
-  const entries = dirs.slice(0, MAX_ENTRIES).map((e) => {
-    const full = path.join(abs, e.name)
-    let repo = false
-    try {
-      repo = isRepoDir(fs.readdirSync(full, { withFileTypes: true }))
-    } catch {
-      /* unreadable */
-    }
-    return { name: e.name, path: full, repo }
-  })
-  const parent = path.dirname(abs)
-  return {
-    path: abs,
-    parent: parent === abs ? null : parent,
-    entries,
-    truncated: dirs.length > MAX_ENTRIES
-  }
 }

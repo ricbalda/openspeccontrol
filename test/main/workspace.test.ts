@@ -5,12 +5,24 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 // isolated data dir and db for this file (each test file runs in its own worker)
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-ws-data-'))
-process.env.OSC_DATA = DATA
+process.env.OSC_DATA = path.join(os.tmpdir(), `osc-ws-noinit-${process.pid}`) // must NOT appear on import
 process.env.OSC_DB = path.join(DATA, 'openspeccontrol.db')
 delete process.env.REPOS_ROOT
 
 const ws = await import('../../src/main/core/workspace.ts')
-const { db, migrateRepoIds } = await import('../../src/main/core/db.ts')
+const { initDataDir, dataDir, dataDirReady } = await import('../../src/main/core/repos.ts')
+const dbMod = await import('../../src/main/core/db.ts')
+const { migrateRepoIds } = dbMod
+
+// explicit startup (task 2.4): importing the modules above opened no db and
+// created no directory
+expect(dataDirReady()).toBe(false)
+expect(fs.existsSync(process.env.OSC_DATA)).toBe(false)
+process.env.OSC_DATA = DATA
+expect(dataDir()).toBe(DATA)
+initDataDir(DATA)
+const db = dbMod.openDb(process.env.OSC_DB)
+ws.loadWorkspaceConfig()
 
 const mk = (...p: string[]) => {
   const d = path.join(...p)
@@ -33,6 +45,7 @@ afterAll(() => fs.rmSync(base, { recursive: true, force: true }))
 
 describe('workspace folders', () => {
   it('starts empty and validates what is added', () => {
+    expect(dataDir()).toBe(DATA)
     expect(ws.roots()).toEqual([])
     expect(() => ws.addRoot('relative/path')).toThrow(/full path/)
     expect(() => ws.addRoot(path.join(base, 'nope'))).toThrow(/not found/)
@@ -80,19 +93,6 @@ describe('workspace folders', () => {
       (await ws.findRepos(true)).repos.some((r) => r.id === path.join(base, 'other', 'api'))
     ).toBe(false)
     expect(ws.repoPath(path.join(base, 'other', 'api'))).toBeNull()
-  })
-
-  it('browses folders only and marks repos', () => {
-    const r = ws.browse(path.join(base, 'work'))
-    expect(r.parent).toBe(base)
-    expect(r.entries.map((e) => [e.name, e.repo])).toEqual([
-      ['api', true],
-      ['node_modules', false],
-      ['notes', false],
-      ['team', false]
-    ])
-    expect(ws.browse('').path).toBeNull() // starting places
-    expect(() => ws.browse(path.join(base, 'nope'))).toThrow()
   })
 })
 

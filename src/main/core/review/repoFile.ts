@@ -2,6 +2,10 @@
 // openspec/changes/<change>/.openspeccontrol-review.json. Committed, it travels
 // with the branch and the PR, and `openspec archive` moves it along with the
 // change. Writing it is opt-in per repo; reading it is always on.
+//
+// Changes last reviewed with OpenSpec Studio only have .studio-review.json
+// (format "openspec-studio-review"): it is read as a fallback, never rewritten,
+// and exports always write the new name.
 
 import fs from 'node:fs'
 import path from 'node:path'
@@ -9,6 +13,9 @@ import type { ReviewComment, ReviewRound } from '@shared/protocol.ts'
 
 export const REVIEW_FILE = '.openspeccontrol-review.json'
 const FORMAT = 'openspeccontrol-review'
+/** Studio 0.3.x's file: read when the new one is missing, never written. */
+export const LEGACY_REVIEW_FILE = '.studio-review.json'
+const LEGACY_FORMAT = 'openspec-studio-review'
 
 /** What goes in the file: no machine-specific repo path. */
 type StoredComment = Omit<ReviewComment, 'repo'>
@@ -57,19 +64,21 @@ export function writeReviewFile(
   return true
 }
 
-/** Read a review file, attaching `repo` to its records; null when absent or not ours. */
-export function readReviewFile(
+/** Read one review file (new or legacy), attaching `repo` to its records; null when absent or not ours. */
+function readOne(
   dir: string,
+  file: string,
+  format: string,
   repo: string
 ): { change: string; comments: ReviewComment[]; rounds: ReviewRound[] } | null {
   let data: Partial<ReviewFile>
   try {
-    data = JSON.parse(fs.readFileSync(path.join(dir, REVIEW_FILE), 'utf8'))
+    data = JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'))
   } catch {
     return null
   }
   if (
-    data?.format !== FORMAT ||
+    data?.format !== format ||
     !Array.isArray(data.comments) ||
     !Array.isArray(data.rounds) ||
     typeof data.change !== 'string'
@@ -81,6 +90,19 @@ export function readReviewFile(
     comments: data.comments.filter(ok).map((c) => ({ ...c, repo }) as ReviewComment),
     rounds: data.rounds.filter(ok).map((r) => ({ ...r, repo }) as ReviewRound)
   }
+}
+
+/**
+ * Read a change's review history: the new file, or Studio's `.studio-review.json`
+ * as a fallback when only that exists. Null when neither is ours.
+ */
+export function readReviewFile(
+  dir: string,
+  repo: string
+): { change: string; comments: ReviewComment[]; rounds: ReviewRound[] } | null {
+  return (
+    readOne(dir, REVIEW_FILE, FORMAT, repo) ?? readOne(dir, LEGACY_REVIEW_FILE, LEGACY_FORMAT, repo)
+  )
 }
 
 /**

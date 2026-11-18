@@ -4,6 +4,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { ReviewComment, ReviewRound } from '@shared/protocol.ts'
 import {
+  LEGACY_REVIEW_FILE,
   readReviewFile,
   REVIEW_FILE,
   writeReviewFile
@@ -63,6 +64,57 @@ describe('review history file', () => {
     fs.writeFileSync(path.join(dir, REVIEW_FILE), '{"hello":1}')
     expect(readReviewFile(dir, REPO)).toBeNull()
     expect(readReviewFile(path.join(dir, 'missing'), REPO)).toBeNull()
+  })
+})
+
+describe('legacy .studio-review.json (Studio 0.3.x)', () => {
+  const legacyFile = (dir: string, over: Record<string, unknown> = {}) =>
+    fs.writeFileSync(
+      path.join(dir, LEGACY_REVIEW_FILE),
+      JSON.stringify({
+        format: 'openspec-studio-review',
+        version: 1,
+        change: 'add-x',
+        comments: [cm],
+        rounds: [done],
+        ...over
+      })
+    )
+
+  it('is read as a fallback when the new file is missing', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-rf-'))
+    legacyFile(dir)
+    const back = readReviewFile(dir, '/other/clone/app')!
+    expect(back.change).toBe('add-x')
+    expect(back.comments).toEqual([{ ...cm, repo: '/other/clone/app' }])
+    expect(back.rounds.map((r) => r.id)).toEqual(['r1'])
+  })
+
+  it('loses to the new file when both exist', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-rf-'))
+    legacyFile(dir)
+    writeReviewFile(dir, 'add-x', [{ ...cm, id: 'new1', body: 'ours' }], [])
+    const back = readReviewFile(dir, REPO)!
+    expect(back.comments.map((c) => c.id)).toEqual(['new1'])
+  })
+
+  it('a legacy file with the wrong format is not ours', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-rf-'))
+    fs.writeFileSync(path.join(dir, LEGACY_REVIEW_FILE), '{"format": "something-else"}')
+    expect(readReviewFile(dir, REPO)).toBeNull()
+  })
+
+  it('exports write only the new name and never touch the legacy file', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-rf-'))
+    legacyFile(dir)
+    const before = fs.readFileSync(path.join(dir, LEGACY_REVIEW_FILE), 'utf8')
+    expect(writeReviewFile(dir, 'add-x', [cm], [done])).toBe(true)
+    expect(fs.existsSync(path.join(dir, REVIEW_FILE))).toBe(true)
+    expect(fs.readFileSync(path.join(dir, LEGACY_REVIEW_FILE), 'utf8')).toBe(before)
+    // a second export updates the new file only
+    writeReviewFile(dir, 'add-x', [{ ...cm, body: 'edited' }], [done])
+    expect(fs.readFileSync(path.join(dir, LEGACY_REVIEW_FILE), 'utf8')).toBe(before)
+    expect(fs.readFileSync(path.join(dir, REVIEW_FILE), 'utf8')).toContain('edited')
   })
 })
 

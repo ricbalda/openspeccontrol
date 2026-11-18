@@ -10,10 +10,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type { UpdateInfo } from '@shared/protocol.ts'
-import { DATA_DIR, OSC_VERSION } from '../core/repos.ts'
+import { dataDir, oscVersion } from '../core/repos.ts'
 
 const REGISTRY = 'https://registry.npmjs.org/openspeccontrol/latest'
-const CACHE = path.join(DATA_DIR, 'update-check.json')
+const cacheFile = () => path.join(dataDir(), 'update-check.json')
 const DAY = 24 * 60 * 60 * 1000
 
 export const updateCheckDisabled = () =>
@@ -40,7 +40,7 @@ interface Cache {
 }
 const readCache = (): Cache | null => {
   try {
-    return JSON.parse(fs.readFileSync(CACHE, 'utf8'))
+    return JSON.parse(fs.readFileSync(cacheFile(), 'utf8'))
   } catch {
     return null
   }
@@ -70,7 +70,7 @@ export async function latestVersion(
       /* offline or blocked: try again tomorrow */
     }
     try {
-      fs.writeFileSync(CACHE, JSON.stringify({ checkedAt: now, latest } satisfies Cache))
+      fs.writeFileSync(cacheFile(), JSON.stringify({ checkedAt: now, latest } satisfies Cache))
     } catch {
       /* read-only data dir */
     }
@@ -82,10 +82,10 @@ export async function latestVersion(
 }
 
 export async function updateInfo(): Promise<UpdateInfo> {
-  const base = { current: OSC_VERSION, install: INSTALL, command: updateCommand(INSTALL) }
+  const base = { current: oscVersion(), install: INSTALL, command: updateCommand(INSTALL) }
   if (updateCheckDisabled()) return { ...base, latest: null, newer: false, disabled: true }
   const latest = await latestVersion()
-  return { ...base, latest, newer: !!latest && isNewer(latest, OSC_VERSION), disabled: false }
+  return { ...base, latest, newer: !!latest && isNewer(latest, oscVersion()), disabled: false }
 }
 
 /** The command that updates this install. */
