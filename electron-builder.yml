@@ -3,6 +3,7 @@ productName: openspeccontrol
 directories:
   buildResources: build
 files:
+  - out/**
   - LICENSE
   - NOTICE
   - '!**/.vscode/*'

@@ -24,6 +24,11 @@ export default defineConfig({
     }
   },
   renderer: {
+    // 'mpa' disables vite's SPA fallback: in dev the renderer still fetches
+    // /api/* (its transport arrives in Fase 3) and the fallback would answer
+    // those calls with a 200 + index.html, poisoning the store with undefined
+    // keys and crashing the panes. With 'mpa' they fail as 404s instead.
+    appType: 'mpa',
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer/src'),
