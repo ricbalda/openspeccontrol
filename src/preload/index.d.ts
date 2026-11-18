@@ -1,8 +1,2 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
-
-declare global {
-  interface Window {
-    electron: ElectronAPI
-    api: unknown
-  }
-}
+// Fase 3 declares window.osc: OscApi here (it replaces the window.electron /
+// window.api declarations of the electron-vite template, removed in Fase 1).

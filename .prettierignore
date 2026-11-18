@@ -1,6 +1,15 @@
 out
 dist
+release
 pnpm-lock.yaml
-LICENSE.md
+package-lock.json
+LICENSE
+NOTICE
 tsconfig.json
 tsconfig.*.json
+# OpenSpec specs and the migration plan are authored documents, not code
+openspec
+Docs
+.backup-fix-npm
+# local agent/tool configuration
+opencode.json
