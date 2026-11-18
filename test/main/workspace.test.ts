@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 // isolated data dir and db for this file (each test file runs in its own worker)
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-ws-data-'))
-process.env.OSC_DATA = DATA
+process.env.OSC_DATA = path.join(os.tmpdir(), `osc-ws-noinit-${process.pid}`) // must NOT appear on import
 process.env.OSC_DB = path.join(DATA, 'openspeccontrol.db')
 delete process.env.REPOS_ROOT
 
@@ -15,8 +15,10 @@ const dbMod = await import('../../src/main/core/db.ts')
 const { migrateRepoIds } = dbMod
 
 // explicit startup (task 2.4): importing the modules above opened no db and
-// created no directory (OSC_DATA points at DATA, which only mkdtemp made)
+// created no directory
 expect(dataDirReady()).toBe(false)
+expect(fs.existsSync(process.env.OSC_DATA)).toBe(false)
+process.env.OSC_DATA = DATA
 expect(dataDir()).toBe(DATA)
 initDataDir(DATA)
 const db = dbMod.openDb(process.env.OSC_DB)
