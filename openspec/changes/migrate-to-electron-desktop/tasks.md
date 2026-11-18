@@ -43,17 +43,17 @@ Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). 
 
 ## 3. Puente IPC y cambio de transporte en el renderer (L)
 
-- [ ] 3.1 Crear `src/shared/ipc.ts` con `interface OscApi`, canales (`osc:<método>`, `osc:client-msg`, `osc:server-msg`), `IpcResult<T>` y códigos de error — verificación: `npm run typecheck` pasa y la tabla 4.2 del plan está cubierta método a método
-- [ ] 3.2 Crear `src/main/ipc.ts`: un `ipcMain.handle` por método con `isTrustedSender`, validación zod y envelope sin excepciones — verificación: `ipc.test.ts` cubre el envelope de éxito y de error
-- [ ] 3.3 Registrar `ipcMain.on('osc:client-msg')` validando con `clientMsg` y enviando por `webContents.send('osc:server-msg')` solo a contenidos no destruidos — verificación: test con un `webContents` simulado
-- [ ] 3.4 Limpiar suscripciones en `did-start-navigation`, `destroyed` y `render-process-gone` y llamar a `syncWatcher` por repo afectado — verificación: test que tras destruir el renderer el watcher del repo se detiene
-- [ ] 3.5 Crear `src/preload/index.ts` con `contextBridge.exposeInMainWorld('osc', api)`, una función explícita por método y `onMessage` que devuelve la baja; declarar `window.osc: OscApi` en `index.d.ts` (reemplaza `window.electron` y `window.api`) — verificación: `window.osc` está disponible en el renderer y no hay `invoke` genérico expuesto
-- [ ] 3.6 Reimplementar `src/renderer/src/lib/api.ts` sobre `window.osc` conservando las firmas — verificación: `api.test.ts` con un `window.osc` simulado
-- [ ] 3.7 En `store.ts`, reemplazar `connectWs`/`wsSend`/reintentos por `window.osc.onMessage` y `window.osc.send`; eliminar `wsUp` y `connectedOnce` — verificación: recargar la ventana recupera el repo y el transcript
-- [ ] 3.8 Quitar el badge "server offline" de `App.tsx` — verificación: `grep -r "offline" src/renderer` no encuentra el badge
-- [ ] 3.9 Eliminar la ruta y el tipo `browse` y cualquier `fetch`/`WebSocket` del renderer — verificación: `grep -rE "fetch\(|WebSocket|BrowseResult" src/renderer` sin resultados
-- [ ] 3.10 Escribir `ipc.test.ts` para `isTrustedSender` (acepta el frame principal; rechaza iframe, otro `webContents` y otra URL) y para el envelope de errores — verificación: `npm test` pasa con esos casos
-- [ ] 3.11 Aceptación de la fase — verificación: con `npm run dev` funciona el recorrido del Walkthrough del README de Studio (añadir carpeta, inicializar, conectar agente, proponer, revisar con comentarios, enviar ronda, construir, commit, archivar), los datos de un `~/.openspec-studio` existente aparecen importados y `netstat` no muestra puertos TCP abiertos por la app
+- [x] 3.1 Crear `src/shared/ipc.ts` con `interface OscApi`, canales (`osc:<método>`, `osc:client-msg`, `osc:server-msg`), `IpcResult<T>` y códigos de error — verificación: `npm run typecheck` pasa y la tabla 4.2 del plan está cubierta método a método
+- [x] 3.2 Crear `src/main/ipc.ts`: un `ipcMain.handle` por método con `isTrustedSender`, validación zod y envelope sin excepciones — verificación: `ipc.test.ts` cubre el envelope de éxito y de error
+- [x] 3.3 Registrar `ipcMain.on('osc:client-msg')` validando con `clientMsg` y enviando por `webContents.send('osc:server-msg')` solo a contenidos no destruidos — verificación: test con un `webContents` simulado
+- [x] 3.4 Limpiar suscripciones en `did-start-navigation`, `destroyed` y `render-process-gone` y llamar a `syncWatcher` por repo afectado — verificación: test que tras destruir el renderer el watcher del repo se detiene
+- [x] 3.5 Crear `src/preload/index.ts` con `contextBridge.exposeInMainWorld('osc', api)`, una función explícita por método y `onMessage` que devuelve la baja; declarar `window.osc: OscApi` en `index.d.ts` (reemplaza `window.electron` y `window.api`) — verificación: `window.osc` está disponible en el renderer y no hay `invoke` genérico expuesto
+- [x] 3.6 Reimplementar `src/renderer/src/lib/api.ts` sobre `window.osc` conservando las firmas — verificación: `api.test.ts` con un `window.osc` simulado
+- [x] 3.7 En `store.ts`, reemplazar `connectWs`/`wsSend`/reintentos por `window.osc.onMessage` y `window.osc.send`; eliminar `wsUp` y `connectedOnce` — verificación: recargar la ventana recupera el repo y el transcript
+- [x] 3.8 Quitar el badge "server offline" de `App.tsx` — verificación: `grep -r "offline" src/renderer` no encuentra el badge
+- [x] 3.9 Eliminar la ruta y el tipo `browse` y cualquier `fetch`/`WebSocket` del renderer — verificación: `grep -rE "fetch\(|WebSocket|BrowseResult" src/renderer` sin resultados
+- [x] 3.10 Escribir `ipc.test.ts` para `isTrustedSender` (acepta el frame principal; rechaza iframe, otro `webContents` y otra URL) y para el envelope de errores — verificación: `npm test` pasa con esos casos
+- [ ] 3.11 (pendiente: recorrido del Walkthrough y netstat sin verificar; solo evidencia estática) Aceptación de la fase — verificación: con `npm run dev` funciona el recorrido del Walkthrough del README de Studio (añadir carpeta, inicializar, conectar agente, proponer, revisar con comentarios, enviar ronda, construir, commit, archivar), los datos de un `~/.openspec-studio` existente aparecen importados y `netstat` no muestra puertos TCP abiertos por la app
 
 ## 4. Shell de escritorio: ventana, ciclo de vida y menú (M)
 
