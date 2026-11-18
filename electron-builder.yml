@@ -3,6 +3,9 @@ productName: openspeccontrol
 directories:
   buildResources: build
 files:
+  - out/**
+  - LICENSE
+  - NOTICE
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'

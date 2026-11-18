@@ -1,22 +1,4 @@
-import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
-
-// Custom APIs for renderer
-const api = {}
-
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
-}
+// Fase 3 will expose window.osc (OscApi) here via contextBridge. Until then the
+// preload is intentionally empty: the renderer does not use window.electron /
+// window.api from the electron-vite template (removed in Fase 1).
+export {}
