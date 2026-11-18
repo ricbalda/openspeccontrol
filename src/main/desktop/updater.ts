@@ -7,59 +7,89 @@
 // OSC identity; the desktop app updates itself, so the Fase 9 rewrite replaces
 // this module with electron-updater (GitHub Releases) and a new UpdateState.
 
-import fs from 'node:fs';
-import path from 'node:path';
-import type { UpdateInfo } from '@shared/protocol.ts';
-import { DATA_DIR, OSC_VERSION } from '../core/repos.ts';
+import fs from 'node:fs'
+import path from 'node:path'
+import type { UpdateInfo } from '@shared/protocol.ts'
+import { DATA_DIR, OSC_VERSION } from '../core/repos.ts'
 
-const REGISTRY = 'https://registry.npmjs.org/openspeccontrol/latest';
-const CACHE = path.join(DATA_DIR, 'update-check.json');
-const DAY = 24 * 60 * 60 * 1000;
+const REGISTRY = 'https://registry.npmjs.org/openspeccontrol/latest'
+const CACHE = path.join(DATA_DIR, 'update-check.json')
+const DAY = 24 * 60 * 60 * 1000
 
-export const updateCheckDisabled = () => /^(1|true|yes)$/i.test(process.env.OSC_NO_UPDATE_CHECK ?? '');
+export const updateCheckDisabled = () =>
+  /^(1|true|yes)$/i.test(process.env.OSC_NO_UPDATE_CHECK ?? '')
 
 /** How this copy was installed; a desktop install is never updated from npm. */
-export const INSTALL: UpdateInfo['install'] = 'clone';
+export const INSTALL: UpdateInfo['install'] = 'clone'
 
 /** a > b for plain x.y.z versions; a pre-release (x.y.z-…) never counts as newer. */
 export function isNewer(a: string, b: string): boolean {
-  if (!/^\d+\.\d+\.\d+$/.test(a)) return false;
-  const pa = a.split('.').map(Number), pb = b.split(/[.-]/).slice(0, 3).map((x) => Number(x) || 0);
-  for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pa[i] > pb[i];
-  return false;
+  if (!/^\d+\.\d+\.\d+$/.test(a)) return false
+  const pa = a.split('.').map(Number),
+    pb = b
+      .split(/[.-]/)
+      .slice(0, 3)
+      .map((x) => Number(x) || 0)
+  for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pa[i] > pb[i]
+  return false
 }
 
-interface Cache { checkedAt: number; latest: string | null }
-const readCache = (): Cache | null => { try { return JSON.parse(fs.readFileSync(CACHE, 'utf8')); } catch { return null; } };
+interface Cache {
+  checkedAt: number
+  latest: string | null
+}
+const readCache = (): Cache | null => {
+  try {
+    return JSON.parse(fs.readFileSync(CACHE, 'utf8'))
+  } catch {
+    return null
+  }
+}
 
-let inflight: Promise<string | null> | null = null;
+let inflight: Promise<string | null> | null = null
 
 /** The latest published version, from the cache when it is less than a day old. */
-export async function latestVersion(now = Date.now(), fetcher: typeof fetch = fetch): Promise<string | null> {
-  const c = readCache();
-  if (c && now - c.checkedAt < DAY && now >= c.checkedAt) return c.latest;
+export async function latestVersion(
+  now = Date.now(),
+  fetcher: typeof fetch = fetch
+): Promise<string | null> {
+  const c = readCache()
+  if (c && now - c.checkedAt < DAY && now >= c.checkedAt) return c.latest
   inflight ??= (async () => {
-    let latest: string | null = c?.latest ?? null;
+    let latest: string | null = c?.latest ?? null
     try {
-      const r = await fetcher(REGISTRY, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(4000) });
+      const r = await fetcher(REGISTRY, {
+        headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(4000)
+      })
       if (r.ok) {
-        const v = (await r.json() as { version?: unknown }).version;
-        if (typeof v === 'string') latest = v;
+        const v = ((await r.json()) as { version?: unknown }).version
+        if (typeof v === 'string') latest = v
       }
-    } catch { /* offline or blocked: try again tomorrow */ }
-    try { fs.writeFileSync(CACHE, JSON.stringify({ checkedAt: now, latest } satisfies Cache)); } catch { /* read-only data dir */ }
-    return latest;
-  })().finally(() => { inflight = null; });
-  return inflight;
+    } catch {
+      /* offline or blocked: try again tomorrow */
+    }
+    try {
+      fs.writeFileSync(CACHE, JSON.stringify({ checkedAt: now, latest } satisfies Cache))
+    } catch {
+      /* read-only data dir */
+    }
+    return latest
+  })().finally(() => {
+    inflight = null
+  })
+  return inflight
 }
 
 export async function updateInfo(): Promise<UpdateInfo> {
-  const base = { current: OSC_VERSION, install: INSTALL, command: updateCommand(INSTALL) };
-  if (updateCheckDisabled()) return { ...base, latest: null, newer: false, disabled: true };
-  const latest = await latestVersion();
-  return { ...base, latest, newer: !!latest && isNewer(latest, OSC_VERSION), disabled: false };
+  const base = { current: OSC_VERSION, install: INSTALL, command: updateCommand(INSTALL) }
+  if (updateCheckDisabled()) return { ...base, latest: null, newer: false, disabled: true }
+  const latest = await latestVersion()
+  return { ...base, latest, newer: !!latest && isNewer(latest, OSC_VERSION), disabled: false }
 }
 
 /** The command that updates this install. */
 export const updateCommand = (install: UpdateInfo['install']) =>
-  install === 'npm' ? 'npm install -g openspeccontrol@latest' : 'git pull && npm install && npm run build';
+  install === 'npm'
+    ? 'npm install -g openspeccontrol@latest'
+    : 'git pull && npm install && npm run build'

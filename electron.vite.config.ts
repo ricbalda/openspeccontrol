@@ -33,6 +33,8 @@ export default defineConfig({
     plugins: [react(), tailwindcss()],
     base: './',
     // WSL: inotify doesn't fire reliably on Windows drives (/mnt/c), so poll there
-    server: process.cwd().startsWith('/mnt/') ? { watch: { usePolling: true, interval: 300 } } : undefined
+    server: process.cwd().startsWith('/mnt/')
+      ? { watch: { usePolling: true, interval: 300 } }
+      : undefined
   }
 })

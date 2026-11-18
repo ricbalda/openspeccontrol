@@ -13,3 +13,8 @@ Docs
 .backup-fix-npm
 # local agent/tool configuration
 opencode.json
+# authored documents and later-phase files (README/CLAUDE are Fase 12, dev-app-update Fase 9)
+README.md
+CLAUDE.md
+dev-app-update.yml
+.vscode
