@@ -1,91 +1,32 @@
-import type {
-  AgentInfo,
-  ArchivedChange,
-  BrowseResult,
-  ChangeSummary,
-  OptionalWorkflow,
-  SpecSummary,
-  LifecycleAction,
-  ReviewComment,
-  ReviewRound,
-  Anchor,
-  CommentKind,
-  GitInfo,
-  UpdateInfo,
-  Workspace
-} from '@shared/protocol.ts'
+// The renderer's core client: the same object Studio had over HTTP, now a thin
+// wrapper over the preload bridge (Fase 3). Signatures are unchanged, so
+// store.ts and the components kept their calls; errors arrive as rejected
+// promises with the core's own message (the preload unfolds the envelope).
 
-async function req<T>(method: string, url: string, body?: unknown): Promise<T> {
-  const r = await fetch(url, {
-    method,
-    headers: body !== undefined ? { 'content-type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined
-  })
-  const data = await r.json().catch(() => ({}))
-  if (!r.ok) throw new Error((data as any).error || `${r.status} ${r.statusText}`)
-  return data as T
-}
-const q = (o: Record<string, string>) => new URLSearchParams(o).toString()
+import type { LifecycleAction } from '@shared/protocol.ts'
+import type { CommentCreateBody, CommentPatchBody, GitCommitBody } from '@shared/ipc.ts'
 
 export const api = {
-  config: () =>
-    req<{ platform: string; defaultAgent: string; agents: AgentInfo[] }>('GET', '/api/config'),
-  update: () => req<UpdateInfo>('GET', '/api/update'),
+  config: () => window.osc.config(),
+  update: () => window.osc.update(),
   git: (repo: string, scope: { change?: string; archived?: string } = {}) =>
-    req<GitInfo>(
-      'GET',
-      `/api/git?${q({ repo, ...(scope.change ? { change: scope.change } : {}), ...(scope.archived ? { archived: scope.archived } : {}) })}`
-    ),
-  gitBranch: (repo: string, change: string) =>
-    req<GitInfo>('POST', '/api/git/branch', { repo, change }),
-  gitCommit: (b: {
-    repo: string
-    change?: string
-    archived?: string
-    files: string[]
-    message: string
-  }) => req<{ commit: string; files: number }>('POST', '/api/git/commit', b),
-  repos: (refresh = false) => req<Workspace>('GET', `/api/repos${refresh ? '?refresh=1' : ''}`),
-  addRoot: (path: string) => req<Workspace>('POST', '/api/roots', { path }),
-  removeRoot: (path: string) => req<Workspace>('DELETE', '/api/roots', { path }),
-  browse: (path?: string | null) =>
-    req<BrowseResult>('GET', `/api/browse${path ? `?${q({ path })}` : ''}`),
-  init: (repo: string, agent: string) =>
-    req<{ ok: boolean; output: string }>('POST', '/api/init', { repo, agent }),
-  changes: (repo: string) =>
-    req<{
-      active: ChangeSummary[]
-      archived: string[]
-      specs: SpecSummary[]
-      workflows: OptionalWorkflow[]
-      reviewInRepo: boolean
-    }>('GET', `/api/changes?${q({ repo })}`),
-  archived: (repo: string, name: string) =>
-    req<ArchivedChange>('GET', `/api/archived?${q({ repo, name })}`),
-  settings: (repo: string, reviewInRepo: boolean) =>
-    req<{ reviewInRepo: boolean }>('POST', '/api/settings', { repo, reviewInRepo }),
-  file: (repo: string, path: string) =>
-    req<{ content: string }>('GET', `/api/file?${q({ repo, path })}`),
+    window.osc.git(repo, scope),
+  gitBranch: (repo: string, change: string) => window.osc.gitBranch(repo, change),
+  gitCommit: (b: GitCommitBody) => window.osc.gitCommit(b),
+  repos: (refresh = false) => window.osc.repos(refresh),
+  addRoot: (path: string) => window.osc.addRoot(path),
+  removeRoot: (path: string) => window.osc.removeRoot(path),
+  init: (repo: string, agent: string) => window.osc.init(repo, agent),
+  changes: (repo: string) => window.osc.changes(repo),
+  archived: (repo: string, name: string) => window.osc.archived(repo, name),
+  settings: (repo: string, reviewInRepo: boolean) => window.osc.settings(repo, reviewInRepo),
+  file: (repo: string, path: string) => window.osc.file(repo, path),
   action: (repo: string, action: LifecycleAction, change?: string, text?: string) =>
-    req<{ ok: true }>('POST', '/api/action', { repo, action, change, text }),
-  review: (repo: string, change: string) =>
-    req<{ comments: ReviewComment[]; rounds: ReviewRound[] }>(
-      'GET',
-      `/api/review?${q({ repo, change })}`
-    ),
-  addComment: (c: {
-    repo: string
-    change: string
-    file: string | null
-    anchor: Anchor | null
-    kind: CommentKind
-    body: string
-  }) => req<ReviewComment>('POST', '/api/comments', c),
-  patchComment: (id: string, patch: Partial<Pick<ReviewComment, 'body' | 'kind' | 'status'>>) =>
-    req<ReviewComment>('PATCH', `/api/comments/${id}`, patch),
-  deleteComment: (id: string) => req<{ ok: true }>('DELETE', `/api/comments/${id}`),
-  sendReview: (repo: string, change: string) =>
-    req<ReviewRound>('POST', '/api/review/send', { repo, change }),
-  closeRound: (repo: string, change: string) =>
-    req<{ ok: true }>('POST', '/api/review/close', { repo, change })
+    window.osc.action(repo, action, change, text),
+  review: (repo: string, change: string) => window.osc.review(repo, change),
+  addComment: (c: CommentCreateBody) => window.osc.addComment(c),
+  patchComment: (id: string, patch: CommentPatchBody) => window.osc.patchComment(id, patch),
+  deleteComment: (id: string) => window.osc.deleteComment(id),
+  sendReview: (repo: string, change: string) => window.osc.sendReview(repo, change),
+  closeRound: (repo: string, change: string) => window.osc.closeRound(repo, change)
 }
