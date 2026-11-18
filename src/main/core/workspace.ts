@@ -103,7 +103,16 @@ export function roots(): Root[] {
   return out
 }
 
-/** Validate and add a folder. Throws a user-facing message. */
+/**
+ * Validate and add a folder. Throws a user-facing message.
+ *
+ * Fase 6 (tarea 6.5): WSL is not an execution mode of its own — the app runs
+ * native on Windows and repos inside a distro are reached as network folders
+ * (`\\wsl$\…` / `\\wsl.localhost\…`, plain UNC paths for this code), with the
+ * CLIs (node, npx, openspec, git) on the Windows side. The reverse direction,
+ * a Linux app working on `/mnt/c/…`, keeps chokidar's polling (see
+ * OscCore.syncWatcher: inotify is unreliable on Windows drives).
+ */
 export function addRoot(input: unknown): string {
   if (typeof input !== 'string' || !input.trim()) throw new Error('Enter a folder path')
   const raw = input.trim().replace(/^~(?=$|[\\/])/, os.homedir())
