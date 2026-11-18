@@ -85,6 +85,18 @@ TypeScript end to end: Electron, React 19, Vite, Tailwind CSS, Node.js (Hono, We
 3. Wrap in Electron (native dialogs, app data folder).
 4. Packaging, bundled agent adapters, auto-update.
 
+## Security
+
+OpenSpecControl is a local desktop app with no network surface:
+
+- **No ports, no network authentication.** The interface talks to the app core over Electron IPC (`contextBridge`); the app never opens a listening socket. Everything stays on your machine (`~/.openspeccontrol`, the app's data folder, and the repositories you add).
+- **Hardened renderer.** The window is created with fixed `webPreferences`: `contextIsolation` and the Chromium sandbox on, `nodeIntegration` off, `webSecurity` on, no spellcheck, and drag-and-drop never navigates. There is no `process` or `require` in the renderer.
+- **Strict Content-Security-Policy** (`default-src 'self'`, no objects, no frames, no base): scripts, styles and connections can only come from the app itself. The development server (HMR included) works under the same policy.
+- **Deny-by-default permissions.** Every permission request is refused except `clipboard-sanitized-write` (what a copy button needs); `<webview>` tags, `window.open` and in-page navigation are all blocked.
+- **Validated IPC.** Every message is checked before any core code runs: only the main window's main frame on the origin the app loaded, arguments validated with zod schemas and size caps, and file access sandboxed to the repositories you added and the data folder.
+- **Agents keep their own gates.** Coding agents run with the CLIs you installed (system `node`/`npx`, never the app's Electron), as your user. Their permission and elicitation prompts are relayed to you in the UI; OpenSpecControl never auto-approves a command behind your back.
+- **Hardened binary.** Packaged builds flip Electron's fuses: `RunAsNode`, `NODE_OPTIONS` and the `--inspect` CLI switch are disabled, and ASAR integrity validation plus `OnlyLoadAppFromAsar` are enabled.
+
 ## Credits and license
 
 OpenSpecControl is built on [openspec-studio](https://github.com/baabullah/openspec-studio) by baabullah (MIT License) and works with [OpenSpec](https://github.com/Fission-AI/OpenSpec) and [Orca](https://github.com/stablyai/orca). License for OpenSpecControl itself: to be defined; derived code keeps its original MIT notice.
