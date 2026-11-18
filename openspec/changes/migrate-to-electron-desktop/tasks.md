@@ -90,13 +90,13 @@ Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). 
 
 ## 7. Endurecimiento de seguridad (S–M)
 
-- [ ] 7.1 Fijar `webPreferences`: `contextIsolation`, `sandbox`, sin `nodeIntegration`, `webSecurity`, `spellcheck: false`, `navigateOnDragDrop: false` — verificación: `window.process` y `require` no existen en la consola del renderer
-- [ ] 7.2 Completar la CSP de `src/renderer/index.html` y comprobar el HMR; si no funciona, inyectar una variante para desarrollo — verificación: `npm run dev` con HMR y la consola sin violaciones de CSP
-- [ ] 7.3 Denegar permisos salvo `clipboard-sanitized-write` (`setPermissionRequestHandler` y `setPermissionCheckHandler`) y bloquear `will-attach-webview` y ventanas nuevas — verificación: test o comprobación manual de que otros permisos se deniegan
-- [ ] 7.4 Mantener `repoPath()`, `safeResolve` (para `file()` y el sandbox de ACP), `validChange`, `MAX_DOC_BYTES` y `capped()` — verificación: pasan `sandbox.test.ts`, `schemas.test.ts` y los demás tests del núcleo
-- [ ] 7.5 Configurar los fuses de Electron (`RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` desactivados; `EnableEmbeddedAsarIntegrityValidation`, `OnlyLoadAppFromAsar` activados) — verificación: `npx @electron/fuses read` sobre el paquete muestra los valores esperados y lanzar la app instalada con `ELECTRON_RUN_AS_NODE=1` arranca la aplicación normal, no un intérprete de Node.js
-- [ ] 7.6 Escribir la sección Security del README — verificación: describe sin puerto ni autenticación de red, IPC validado y permisos de los agentes
-- [ ] 7.7 Aceptación de la fase — verificación: checklist de seguridad de Electron revisada punto por punto en `design.md`, consola del renderer sin advertencias de seguridad y tests de `isTrustedSender` en verde
+- [x] 7.1 Fijar `webPreferences`: `contextIsolation`, `sandbox`, sin `nodeIntegration`, `webSecurity`, `spellcheck: false`, `navigateOnDragDrop: false` — verificación: `window.process` y `require` no existen en la consola del renderer
+- [x] 7.2 Completar la CSP de `src/renderer/index.html` y comprobar el HMR; si no funciona, inyectar una variante para desarrollo — verificación: `npm run dev` con HMR y la consola sin violaciones de CSP
+- [x] 7.3 Denegar permisos salvo `clipboard-sanitized-write` (`setPermissionRequestHandler` y `setPermissionCheckHandler`) y bloquear `will-attach-webview` y ventanas nuevas — verificación: test o comprobación manual de que otros permisos se deniegan
+- [x] 7.4 Mantener `repoPath()`, `safeResolve` (para `file()` y el sandbox de ACP), `validChange`, `MAX_DOC_BYTES` y `capped()` — verificación: pasan `sandbox.test.ts`, `schemas.test.ts` y los demás tests del núcleo
+- [x] 7.5 (verificado solo en Windows) Configurar los fuses de Electron (`RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` desactivados; `EnableEmbeddedAsarIntegrityValidation`, `OnlyLoadAppFromAsar` activados) — verificación: `npx @electron/fuses read` sobre el paquete muestra los valores esperados y lanzar la app instalada con `ELECTRON_RUN_AS_NODE=1` arranca la aplicación normal, no un intérprete de Node.js
+- [x] 7.6 Escribir la sección Security del README — verificación: describe sin puerto ni autenticación de red, IPC validado y permisos de los agentes
+- [x] 7.7 Aceptación de la fase — verificación: checklist de seguridad de Electron revisada punto por punto en `design.md`, consola del renderer sin advertencias de seguridad y tests de `isTrustedSender` en verde
 
 ## 8. Empaquetado y firma (L)
 
