@@ -29,13 +29,6 @@ export interface Workspace {
   repos: RepoInfo[]
 }
 
-export interface BrowseResult {
-  path: string | null // null = starting places (home, folders, drives)
-  parent: string | null
-  entries: { name: string; path: string; repo: boolean }[]
-  truncated: boolean
-}
-
 export type SessionStatus = 'starting' | 'ready' | 'busy' | 'exited' | 'error'
 
 export interface ConfigSelectOption {

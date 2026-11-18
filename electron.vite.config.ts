@@ -12,6 +12,11 @@ export default defineConfig({
     }
   },
   preload: {
+    resolve: {
+      alias: {
+        '@shared': resolve('src/shared')
+      }
+    },
     build: {
       // bundle everything: a sandboxed preload cannot load external deps
       externalizeDeps: false,
@@ -24,10 +29,8 @@ export default defineConfig({
     }
   },
   renderer: {
-    // 'mpa' disables vite's SPA fallback: in dev the renderer still fetches
-    // /api/* (its transport arrives in Fase 3) and the fallback would answer
-    // those calls with a 200 + index.html, poisoning the store with undefined
-    // keys and crashing the panes. With 'mpa' they fail as 404s instead.
+    // a plain single entry: unknown paths stay 404 (no SPA fallback needed;
+    // the renderer talks to the core over IPC only, Fase 3)
     appType: 'mpa',
     resolve: {
       alias: {

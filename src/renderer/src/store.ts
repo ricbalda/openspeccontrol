@@ -79,7 +79,6 @@ interface State {
   rounds: ReviewRound[]
   focusComment: string | null
   toasts: Toast[]
-  wsUp: boolean
   addFolderOpen: boolean
   /** a turn finished while the tab was in the background (cleared when it gets focus) */
   doneUnseen: boolean
@@ -112,7 +111,6 @@ export const useStore = create<State>(() => ({
   rounds: [],
   focusComment: null,
   toasts: [],
-  wsUp: false,
   addFolderOpen: false,
   doneUnseen: false
 }))
@@ -138,49 +136,16 @@ const guard = async <T>(p: Promise<T>): Promise<T | undefined> => {
   }
 }
 
-// ---- websocket -----------------------------------------------------------------
-let ws: WebSocket | null = null
-let retry = 0
-let connectedOnce = false
+// ---- realtime over the preload bridge -----------------------------------------
+// No network and no reconnects (Fase 3): the main process pushes
+// 'osc:server-msg' events and a page reload recovers by subscribing again —
+// the core answers with the session and the transcript replay.
+
+/** Waiting for a session to become ready (ensureAgent). */
 const readyWaiters: (() => void)[] = []
 
-function connectWs() {
-  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`)
-  ws.onopen = () => {
-    retry = 0
-    set({ wsUp: true })
-    const r = get().repo
-    if (r) wsSend({ type: 'subscribe', repo: r }) // also replays the agent transcript
-    // while we were offline, file changes and review updates were broadcast to no one
-    // (repos first: the selected repo may be gone, and applyWorkspace then deselects it)
-    if (connectedOnce)
-      loadRepos().then(() => {
-        if (get().repo) {
-          loadChanges()
-          loadReview()
-          reloadFile()
-        }
-      })
-    connectedOnce = true
-  }
-  ws.onclose = () => {
-    set({ wsUp: false })
-    setTimeout(connectWs, Math.min(5000, 500 * 2 ** retry++))
-  }
-  ws.onmessage = (ev) => {
-    let m: ServerMsg
-    try {
-      m = JSON.parse(ev.data)
-    } catch {
-      console.warn('ignored a malformed server message')
-      return
-    }
-    onServer(m)
-  }
-}
-export function wsSend(m: ClientMsg) {
-  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(m))
-  else toast('Not connected to the app server. Reconnecting…', 'error')
+export function sendMsg(m: ClientMsg) {
+  window.osc.send(m)
 }
 
 // The server replays at most this many events (db.ts events.list); keep the live
@@ -283,7 +248,8 @@ let booted = false
 export async function boot() {
   if (booted) return
   booted = true
-  connectWs()
+  // core events for this page's lifetime; a reload re-subscribes and replays
+  window.osc.onMessage(onServer)
   const cfg = await guard(api.config())
   if (cfg)
     set({
@@ -355,7 +321,7 @@ export function selectRepo(id: string) {
     comments: [],
     rounds: []
   })
-  wsSend({ type: 'subscribe', repo: id })
+  sendMsg({ type: 'subscribe', repo: id })
   loadChanges()
 }
 
@@ -368,19 +334,19 @@ export function setAgent(agent: string) {
 export function startAgent(resume = true) {
   askNotificationPermission()
   const { repo, agent } = get()
-  if (repo) wsSend({ type: 'start', repo, agent, resume })
+  if (repo) sendMsg({ type: 'start', repo, agent, resume })
 }
 export const stopAgent = () => {
   const r = get().repo
-  if (r) wsSend({ type: 'stop', repo: r })
+  if (r) sendMsg({ type: 'stop', repo: r })
 }
 export const cancelTurn = () => {
   const r = get().repo
-  if (r) wsSend({ type: 'cancel', repo: r })
+  if (r) sendMsg({ type: 'cancel', repo: r })
 }
 export const sendPrompt = (text: string) => {
   const r = get().repo
-  if (r && text.trim()) wsSend({ type: 'prompt', repo: r, text })
+  if (r && text.trim()) sendMsg({ type: 'prompt', repo: r, text })
 }
 
 /** Start the agent if needed and wait until it can take a prompt. */
@@ -599,7 +565,7 @@ export const review = {
 
 export function answerPermission(id: string, optionId: string | null, label: string) {
   const r = get().repo
-  if (r) wsSend({ type: 'permission', repo: r, id, optionId, label })
+  if (r) sendMsg({ type: 'permission', repo: r, id, optionId, label })
 }
 export function answerElicitation(
   id: string,
@@ -607,11 +573,11 @@ export function answerElicitation(
   content?: Record<string, unknown>
 ) {
   const r = get().repo
-  if (r) wsSend({ type: 'elicitation', repo: r, id, action, content })
+  if (r) sendMsg({ type: 'elicitation', repo: r, id, action, content })
 }
 export function setConfig(configId: string, value: string | boolean) {
   const r = get().repo
-  if (r) wsSend({ type: 'set_config', repo: r, configId, value })
+  if (r) sendMsg({ type: 'set_config', repo: r, configId, value })
 }
 
 export function setTheme(t: 'light' | 'dark' | 'system') {
