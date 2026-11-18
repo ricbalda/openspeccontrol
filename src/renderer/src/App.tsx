@@ -8,6 +8,7 @@ import { RepoRail } from './panes/RepoRail.tsx'
 import { DocReview } from './panes/DocReview.tsx'
 import { AgentPanel } from './panes/AgentPanel.tsx'
 import { AddFolderDialog } from './panes/Folders.tsx'
+import { ToolsDialog } from './panes/ToolsDialog.tsx'
 import { ErrorBoundary } from './lib/ErrorBoundary.tsx'
 import {
   clampAgentWidth,
@@ -170,6 +171,7 @@ export function App() {
       </div>
       <Toasts />
       <AddFolderDialog />
+      <ToolsDialog />
     </div>
   )
 }

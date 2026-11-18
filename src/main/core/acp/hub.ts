@@ -153,7 +153,7 @@ export class TurnUsageMeter {
 }
 
 /** Corporate shells often only export lowercase proxy vars; mirror them so every HTTP client sees them. */
-function agentEnv(extra?: Record<string, string>) {
+export function agentEnv(extra?: Record<string, string>) {
   const env: Record<string, string | undefined> = { ...process.env, ...extra }
   for (const k of ['no_proxy', 'http_proxy', 'https_proxy'])
     if (env[k] && !env[k.toUpperCase()]) env[k.toUpperCase()] = env[k]
