@@ -1,9 +1,10 @@
-// Shapes of what the browser may send: REST bodies and WebSocket messages.
-// Anything else is rejected with a 400 / an error message instead of being
-// cast and trusted. Over-long text is cut, not rejected, as before.
+// Shapes of what the renderer may send: IPC arguments and client messages.
+// Anything else is rejected with an "invalid" error instead of being cast and
+// trusted. Over-long text is cut, not rejected, as before.
 
 import { z } from 'zod'
 import type { ClientMsg } from '@shared/protocol.ts'
+import { OscError } from './errors.ts'
 
 const capped = (max: number) => z.string().transform((s) => s.slice(0, max))
 const repo = z.string().min(1)
@@ -90,10 +91,9 @@ export const clientMsg = z.discriminatedUnion('type', [
 export const describeIssues = (e: z.ZodError) =>
   e.issues.map((i) => (i.path.length ? `${i.path.join('.')}: ${i.message}` : i.message)).join('; ')
 
-/** Parse or throw an error the HTTP error handler turns into a 400. */
-export function parseOr400<T extends z.ZodType>(schema: T, data: unknown): z.output<T> {
+/** Parse or throw an OscError the IPC layer reports as code "invalid". */
+export function parseOrThrow<T extends z.ZodType>(schema: T, data: unknown): z.output<T> {
   const r = schema.safeParse(data)
-  if (!r.success)
-    throw Object.assign(new Error(`invalid request: ${describeIssues(r.error)}`), { status: 400 })
+  if (!r.success) throw new OscError('invalid', `invalid request: ${describeIssues(r.error)}`)
   return r.data
 }

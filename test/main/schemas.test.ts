@@ -4,7 +4,7 @@ import {
   clientMsg,
   commentCreate,
   commentPatch,
-  parseOr400
+  parseOrThrow
 } from '../../src/main/core/schemas.ts'
 
 describe('request schemas', () => {
@@ -33,12 +33,12 @@ describe('request schemas', () => {
     expect(m.type === 'prompt' && m.text.length).toBe(20000)
   })
 
-  it('rejects wrong shapes with a 400', () => {
-    expect(() => parseOr400(actionBody, { repo: '/r', action: 'rm -rf' })).toThrow(
+  it('rejects wrong shapes with an "invalid" error', () => {
+    expect(() => parseOrThrow(actionBody, { repo: '/r', action: 'rm -rf' })).toThrow(
       /invalid request: action/
     )
-    expect(() => parseOr400(commentPatch, { status: 'sent' })).toThrow(
-      expect.objectContaining({ status: 400 })
+    expect(() => parseOrThrow(commentPatch, { status: 'sent' })).toThrow(
+      expect.objectContaining({ code: 'invalid' })
     )
     expect(clientMsg.safeParse({ type: 'prompt', repo: '/r', text: 42 }).success).toBe(false)
     expect(clientMsg.safeParse({ type: 'nope', repo: '/r' }).success).toBe(false)

@@ -15,7 +15,7 @@ import type {
 } from '@shared/protocol.ts'
 import type { AgentDef } from '../agents.ts'
 import { events, sessions } from '../db.ts'
-import { safeResolve, OSC_VERSION } from '../repos.ts'
+import { safeResolve, oscVersion } from '../repos.ts'
 
 export interface TurnResult {
   stopReason: string
@@ -336,7 +336,7 @@ export class AgentSession {
           terminal: false,
           elicitation: { form: {} }
         },
-        clientInfo: { name: 'openspeccontrol', version: OSC_VERSION }
+        clientInfo: { name: 'openspeccontrol', version: oscVersion() }
       } as any)
       const stored = sessions.get(this.repo, this.agent.id)
       let res: any = null
