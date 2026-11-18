@@ -52,11 +52,26 @@ export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: IpcError 
 
 // ---- the API ---------------------------------------------------------------------
 
+/** One external CLI of the dependency check (Fase 6): node, npx, openspec, git. */
+export type ToolId = 'node' | 'npx' | 'openspec' | 'git'
+
+/** How `config().tools` reports each external CLI the app relies on. */
+export interface ToolStatus {
+  id: ToolId
+  found: boolean
+  version?: string
+  path?: string
+  /** how to install it, shown when found is false (e.g. `npm install -g @fission-ai/openspec`) */
+  hint?: string
+}
+
 /** `GET /api/config` */
 export interface OscConfig {
   platform: string
   defaultAgent: string
   agents: AgentInfo[]
+  /** external CLIs (node, npx, openspec, git) for the missing-tool warnings and the diagnostics dialog */
+  tools: ToolStatus[]
 }
 
 /** `GET /api/changes` */
