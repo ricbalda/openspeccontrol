@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeTheme, screen } from 'electron'
+import { app, BrowserWindow, nativeTheme, screen, session } from 'electron'
 import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { SERVER_MSG_CHANNEL } from '@shared/ipc.ts'
@@ -16,11 +16,18 @@ import {
   saveWindowState,
   windowStateFile
 } from './desktop/window-state.ts'
+import { ensureShellEnv } from './desktop/shell-env.ts'
+import {
+  applySessionSecurity,
+  applyWindowSecurity,
+  secureWebPreferences
+} from './desktop/security.ts'
 
 // Fase 2: the core is created at startup (data dir, Studio import, db) and shut
 // down on quit (agents, watchers, WAL checkpoint). Fase 3 registers the IPC
 // bridge. Fase 4: single instance, window state, safe close, menu, renderer
-// health and the app identity.
+// health and the app identity. Fase 6/7: login-shell env and hardening before
+// any child process or window exists.
 
 let core: OscCore | null = null
 let bridge: IpcBridge | null = null
@@ -52,12 +59,14 @@ function createWindow(): void {
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#111114' : '#f7f7f8',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(import.meta.dirname, '../preload/index.cjs'),
-      sandbox: true
+      ...secureWebPreferences,
+      preload: join(import.meta.dirname, '../preload/index.cjs')
     }
   })
   if (saved?.maximized) mainWindow.maximize()
 
+  // Fase 7: no webview, no window.open, no navigation away from the app page
+  applyWindowSecurity(mainWindow.webContents)
   // the bridge only trusts this window, and drops its subscriptions on
   // reload / destroy / renderer crash (the core then stops idle watchers)
   bridge?.attachWindow(mainWindow)
@@ -120,7 +129,13 @@ if (!app.requestSingleInstanceLock()) {
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
-  app.whenReady().then(() => {
+  app.whenReady().then(async () => {
+    // Fase 6: on macOS/Linux the dock/launcher PATH misses nvm/volta/homebrew;
+    // merge the login shell's env before any child process is spawned (no-op on
+    // Windows, where the process inherits the user's PATH)
+    await ensureShellEnv()
+    // Fase 7: deny-by-default permissions for the session the window uses
+    applySessionSecurity(session.defaultSession)
     core = createOscCore({ version: app.getVersion() })
     bridge = registerIpc({ core, window: () => mainWindow })
     installAppMenu(sendToRenderer) // Fase 4.6 (also removes autoHideMenuBar)

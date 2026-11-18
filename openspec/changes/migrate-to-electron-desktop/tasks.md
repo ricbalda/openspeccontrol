@@ -81,22 +81,22 @@ Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). 
 
 ## 6. Entorno de ejecución: PATH, variables y diagnóstico (M)
 
-- [ ] 6.1 Implementar `desktop/shell-env.ts`: en macOS/Linux, antes de crear `OscCore`, ejecutar `$SHELL -ilc` con delimitadores y timeout de unos 5 s, fusionar `PATH`, proxy y variables `OSC_*`/`OPENSPEC_*`/`REPOS_ROOT`/`DEFAULT_AGENT` y, si falla, añadir rutas conocidas — verificación: `shell-env.test.ts` cubre el parseo con delimitadores, el timeout y el fallback
-- [ ] 6.2 Conservar el reflejo de `http_proxy`/`https_proxy`/`no_proxy` en mayúsculas para los agentes (`agentEnv` en `hub.ts`) — verificación: test que el entorno del agente trae las variables en ambos casos
-- [ ] 6.3 Implementar `desktop/tools.ts` para detectar `node`, `npx`, `openspec` (`OPENSPEC_BIN`) y `git` y exponer `config().tools` (`ToolStatus`) — verificación: `tools.test.ts` con herramientas presentes y ausentes
-- [ ] 6.4 Mostrar el aviso con `npm install -g @fission-ai/openspec` en "Set up OpenSpec" y en el panel del agente, y añadir el diálogo Ayuda → Diagnóstico de dependencias — verificación: con `openspec` desinstalado el diagnóstico lo marca con el comando
-- [ ] 6.5 Tratar WSL como carpeta de red: mantener el polling de chokidar para `/mnt/*` y documentar `\\wsl$\…` — verificación: añadir un repo en `\\wsl.localhost\…` y listar sus cambios
-- [ ] 6.6 Aceptación de la fase — verificación: en macOS y Linux, al abrir la app desde el dock/lanzador, encuentra `openspec`, `npx` y `git` instalados con nvm, volta o homebrew
+- [x] 6.1 Implementar `desktop/shell-env.ts`: en macOS/Linux, antes de crear `OscCore`, ejecutar `$SHELL -ilc` con delimitadores y timeout de unos 5 s, fusionar `PATH`, proxy y variables `OSC_*`/`OPENSPEC_*`/`REPOS_ROOT`/`DEFAULT_AGENT` y, si falla, añadir rutas conocidas — verificación: `shell-env.test.ts` cubre el parseo con delimitadores, el timeout y el fallback
+- [x] 6.2 Conservar el reflejo de `http_proxy`/`https_proxy`/`no_proxy` en mayúsculas para los agentes (`agentEnv` en `hub.ts`) — verificación: test que el entorno del agente trae las variables en ambos casos
+- [x] 6.3 Implementar `desktop/tools.ts` para detectar `node`, `npx`, `openspec` (`OPENSPEC_BIN`) y `git` y exponer `config().tools` (`ToolStatus`) — verificación: `tools.test.ts` con herramientas presentes y ausentes
+- [x] 6.4 Mostrar el aviso con `npm install -g @fission-ai/openspec` en "Set up OpenSpec" y en el panel del agente, y añadir el diálogo Ayuda → Diagnóstico de dependencias — verificación: con `openspec` desinstalado el diagnóstico lo marca con el comando
+- [ ] 6.5 (parcial: polling /mnt existente; UNC testeado con skip por falta de distro WSL) Tratar WSL como carpeta de red: mantener el polling de chokidar para `/mnt/*` y documentar `\\wsl$\…` — verificación: añadir un repo en `\\wsl.localhost\…` y listar sus cambios
+- [ ] 6.6 (pendiente: requiere macOS y Linux) Aceptación de la fase — verificación: en macOS y Linux, al abrir la app desde el dock/lanzador, encuentra `openspec`, `npx` y `git` instalados con nvm, volta o homebrew
 
 ## 7. Endurecimiento de seguridad (S–M)
 
-- [ ] 7.1 Fijar `webPreferences`: `contextIsolation`, `sandbox`, sin `nodeIntegration`, `webSecurity`, `spellcheck: false`, `navigateOnDragDrop: false` — verificación: `window.process` y `require` no existen en la consola del renderer
-- [ ] 7.2 Completar la CSP de `src/renderer/index.html` y comprobar el HMR; si no funciona, inyectar una variante para desarrollo — verificación: `npm run dev` con HMR y la consola sin violaciones de CSP
-- [ ] 7.3 Denegar permisos salvo `clipboard-sanitized-write` (`setPermissionRequestHandler` y `setPermissionCheckHandler`) y bloquear `will-attach-webview` y ventanas nuevas — verificación: test o comprobación manual de que otros permisos se deniegan
-- [ ] 7.4 Mantener `repoPath()`, `safeResolve` (para `file()` y el sandbox de ACP), `validChange`, `MAX_DOC_BYTES` y `capped()` — verificación: pasan `sandbox.test.ts`, `schemas.test.ts` y los demás tests del núcleo
-- [ ] 7.5 Configurar los fuses de Electron (`RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` desactivados; `EnableEmbeddedAsarIntegrityValidation`, `OnlyLoadAppFromAsar` activados) — verificación: `npx @electron/fuses read` sobre el paquete muestra los valores esperados y lanzar la app instalada con `ELECTRON_RUN_AS_NODE=1` arranca la aplicación normal, no un intérprete de Node.js
-- [ ] 7.6 Escribir la sección Security del README — verificación: describe sin puerto ni autenticación de red, IPC validado y permisos de los agentes
-- [ ] 7.7 Aceptación de la fase — verificación: checklist de seguridad de Electron revisada punto por punto en `design.md`, consola del renderer sin advertencias de seguridad y tests de `isTrustedSender` en verde
+- [x] 7.1 Fijar `webPreferences`: `contextIsolation`, `sandbox`, sin `nodeIntegration`, `webSecurity`, `spellcheck: false`, `navigateOnDragDrop: false` — verificación: `window.process` y `require` no existen en la consola del renderer
+- [x] 7.2 Completar la CSP de `src/renderer/index.html` y comprobar el HMR; si no funciona, inyectar una variante para desarrollo — verificación: `npm run dev` con HMR y la consola sin violaciones de CSP
+- [x] 7.3 Denegar permisos salvo `clipboard-sanitized-write` (`setPermissionRequestHandler` y `setPermissionCheckHandler`) y bloquear `will-attach-webview` y ventanas nuevas — verificación: test o comprobación manual de que otros permisos se deniegan
+- [x] 7.4 Mantener `repoPath()`, `safeResolve` (para `file()` y el sandbox de ACP), `validChange`, `MAX_DOC_BYTES` y `capped()` — verificación: pasan `sandbox.test.ts`, `schemas.test.ts` y los demás tests del núcleo
+- [x] 7.5 (verificado solo en Windows) Configurar los fuses de Electron (`RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` desactivados; `EnableEmbeddedAsarIntegrityValidation`, `OnlyLoadAppFromAsar` activados) — verificación: `npx @electron/fuses read` sobre el paquete muestra los valores esperados y lanzar la app instalada con `ELECTRON_RUN_AS_NODE=1` arranca la aplicación normal, no un intérprete de Node.js
+- [x] 7.6 Escribir la sección Security del README — verificación: describe sin puerto ni autenticación de red, IPC validado y permisos de los agentes
+- [x] 7.7 Aceptación de la fase — verificación: checklist de seguridad de Electron revisada punto por punto en `design.md`, consola del renderer sin advertencias de seguridad y tests de `isTrustedSender` en verde
 
 ## 8. Empaquetado y firma (L)
 

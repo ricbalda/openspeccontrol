@@ -18,6 +18,7 @@ import type {
   SessionState,
   Workspace
 } from '@shared/protocol.ts'
+import type { ToolStatus } from '@shared/ipc.ts'
 import { api } from './lib/api.ts'
 
 const ls = {
@@ -55,6 +56,8 @@ interface State {
   agents: AgentInfo[]
   defaultAgent: string
   platform: string
+  /** external CLIs from config() (Fase 6): warnings and the diagnostics dialog */
+  tools: ToolStatus[]
   roots: RootInfo[]
   reposLoaded: boolean
   repos: RepoInfo[]
@@ -81,6 +84,8 @@ interface State {
   focusComment: string | null
   toasts: Toast[]
   addFolderOpen: boolean
+  /** Ayuda → Diagnóstico de dependencias (Fase 6); the Help menu opens it */
+  diagOpen: boolean
   /** a turn finished while the tab was in the background (cleared when it gets focus) */
   doneUnseen: boolean
 }
@@ -90,6 +95,7 @@ export const useStore = create<State>(() => ({
   agents: [],
   defaultAgent: '',
   platform: '',
+  tools: [],
   roots: [],
   reposLoaded: false,
   repos: [],
@@ -113,6 +119,7 @@ export const useStore = create<State>(() => ({
   focusComment: null,
   toasts: [],
   addFolderOpen: false,
+  diagOpen: false,
   doneUnseen: false
 }))
 const set = useStore.setState
@@ -258,7 +265,8 @@ export async function boot() {
       agents: cfg.agents,
       defaultAgent: cfg.defaultAgent,
       agent: get().agent || cfg.defaultAgent,
-      platform: cfg.platform
+      platform: cfg.platform,
+      tools: cfg.tools ?? []
     })
   await loadRepos()
   const last = ls.get('repo')
@@ -297,6 +305,13 @@ export async function addRoot(path: string): Promise<boolean> {
 }
 
 export const openAddFolder = (open = true) => set({ addFolderOpen: open })
+
+/**
+ * Open/close the dependency diagnostics dialog (Fase 6). Exported so the Help
+ * menu entry (wired to the native menu by the orchestrator, Fase 4 owns
+ * menu.ts) can reach it, like openAddFolder.
+ */
+export const openDiagnostics = (open = true) => set({ diagOpen: open })
 
 export async function removeRoot(path: string) {
   const w = await guard(api.removeRoot(path))
