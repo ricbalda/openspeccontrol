@@ -3,6 +3,7 @@ import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { createOscCore, type OscCore } from './core/osc-core.ts'
 import { registerIpc, type IpcBridge } from './ipc.ts'
+import { ensureShellEnv } from './desktop/shell-env.ts'
 
 // Fase 2: the core is created at startup (data dir, Studio import, db) and shut
 // down on quit (agents, watchers, WAL checkpoint). Fase 3 registers the IPC
@@ -43,7 +44,11 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Fase 6: on macOS/Linux the dock/launcher PATH misses nvm/volta/homebrew;
+  // merge the login shell's env before any child process is spawned (no-op on
+  // Windows, where the process inherits the user's PATH)
+  await ensureShellEnv()
   core = createOscCore({ version: app.getVersion() })
   bridge = registerIpc({ core, window: () => mainWindow })
   createWindow()
