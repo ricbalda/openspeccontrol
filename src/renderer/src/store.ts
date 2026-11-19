@@ -85,6 +85,10 @@ interface State {
   /** the repo's branch; refreshed on focus, file changes and turn ends */
   git: GitInfo | null
   changesLoaded: boolean
+  /** tarea 11.5: the active list is a local inference until the CLI confirms */
+  changesStale: boolean
+  /** why the background refresh of a stale list failed (null when it didn't) */
+  changesError: string | null
   change: string | null
   file: string | null // relative to change dir, or '__changes__' for the diff view
   content: string
@@ -127,6 +131,8 @@ export const useStore = create<State>(() => ({
   browse: null,
   git: null,
   changesLoaded: false,
+  changesStale: false,
+  changesError: null,
   change: null,
   file: null,
   content: '',
@@ -163,6 +169,9 @@ export interface RepoView {
   browse: Browse | null
   git: GitInfo | null
   changesLoaded: boolean
+  /** tarea 11.5: the list is a local inference until the CLI confirms it */
+  changesStale: boolean
+  changesError: string | null
   change: string | null
   file: string | null
 }
@@ -177,6 +186,8 @@ const emptyView = (): RepoView => ({
   browse: null,
   git: null,
   changesLoaded: false,
+  changesStale: false,
+  changesError: null,
   change: null,
   file: null
 })
@@ -213,6 +224,8 @@ function saveView(id: string) {
         browse: s.browse,
         git: s.git,
         changesLoaded: s.changesLoaded,
+        changesStale: s.changesStale,
+        changesError: s.changesError,
         change: s.change,
         file: s.file
       }
@@ -240,6 +253,8 @@ function resetProjection() {
     browse: null,
     git: null,
     changesLoaded: false,
+    changesStale: false,
+    changesError: null,
     change: null,
     file: null,
     content: '',
@@ -400,6 +415,12 @@ function onServer(m: ServerMsg) {
       break
     case 'artifacts_changed':
       scheduleRefresh(m.repo)
+      break
+    case 'changes_updated':
+      // tarea 11.5: the background CLI refresh settled — fetch the confirmed
+      // list at once (it replaces the inferred one wherever it is showing)
+      if (active) void loadChanges()
+      else void loadChangesFor(m.repo)
       break
     case 'review_changed':
       if (active) {
@@ -670,6 +691,8 @@ export function activateRepo(id: string) {
     browse: v.browse,
     git: v.git,
     changesLoaded: v.changesLoaded,
+    changesStale: v.changesStale,
+    changesError: v.changesError,
     change: v.change,
     file: v.file,
     content: '',
@@ -802,6 +825,10 @@ export async function loadChangesFor(repo: string) {
 async function loadChangesInto(repo: string) {
   const r = await guard(api.changes(repo))
   if (!r || !get().openRepos.includes(repo)) return // cerrado o desaparecido mientras cargaba
+  // tarea 11.5: la lista puede ser una inferencia local (stale) que el refresco
+  // en segundo plano sustituirá; la marca viaja con la vista para que la UI no
+  // la enseñe como definitiva
+  const mark = { changesStale: r.stale === true, changesError: r.refreshError ?? null }
   if (get().repo === repo) {
     set({
       changes: r.active,
@@ -809,7 +836,8 @@ async function loadChangesInto(repo: string) {
       specs: r.specs,
       workflows: r.workflows,
       reviewInRepo: r.reviewInRepo,
-      changesLoaded: true
+      changesLoaded: true,
+      ...mark
     })
     const { browse } = get()
     if (browse?.kind === 'spec' && !r.specs.some((x) => x.name === browse.name))
@@ -828,7 +856,8 @@ async function loadChangesInto(repo: string) {
       specs: r.specs,
       workflows: r.workflows,
       reviewInRepo: r.reviewInRepo,
-      changesLoaded: true
+      changesLoaded: true,
+      ...mark
     }))
   }
 }
