@@ -1,7 +1,7 @@
 # Informe de verificación — tareas 3.11 y 1.11 (`migrate-to-electron-desktop`)
 
 Plataforma: Windows 11, Node 26 / Electron 45 (`npm run dev` y build de producción por CDP 9301), CLI real `openspec` 2.0.0 y `git`.
-Fecha de las ejecuciones: 2026-11-19. Todo lo de abajo lo ejecuté yo; los logs completos están en `test/e2e/captures/`.
+Fecha de las ejecuciones: 2026-11-19. Todo lo de abajo lo ejecuté yo; las capturas `.png` están versionadas en `test/e2e/captures/`; los `.log` (`fase3-walkthrough.log`, `fase3-debug-all.log`) quedan ignorados por git y se regeneran ejecutando los scripts.
 
 ## Resumen
 
