@@ -120,11 +120,11 @@ Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). 
 
 ## 10. CI/CD (M)
 
-- [ ] 10.1 Crear `.github/workflows/ci.yml` (matriz ubuntu/windows/macos × Node 22 y 24: `npm ci` → `lint` → `typecheck` → `test` → `electron-vite build` → `dist:dir`, con `xvfb-run` en Linux) — verificación: un PR ejecuta la matriz completa en verde
-- [ ] 10.2 Añadir el arranque de prueba en la CI con `--remote-debugging-port` (existe `#root` y no hay errores de consola) — verificación: el job falla si la app no carga y pasa si carga
-- [ ] 10.3 Crear `.github/workflows/release.yml` con tags `v*`, firma y notarización y release en borrador con los artefactos y los `latest*.yml` — verificación: un tag de prueba genera el borrador con los instaladores de las 3 plataformas
-- [ ] 10.4 Documentar en el README (sección Development) cómo crear un release — verificación: una persona ajena al proyecto puede seguir los pasos hasta el borrador
-- [ ] 10.5 Aceptación de la fase — verificación: un PR ejecuta la matriz completa en verde y un tag de prueba genera el release en borrador con los 3 instaladores
+- [ ] 10.1 (implementado; pendiente de ejecutar en GitHub) Crear `.github/workflows/ci.yml` (matriz ubuntu/windows/macos × Node 22 y 24: `npm ci` → `lint` → `typecheck` → `test` → `electron-vite build` → `dist:dir`, con `xvfb-run` en Linux) — verificación: un PR ejecuta la matriz completa en verde
+- [ ] 10.2 (implementado; pendiente de ejecutar en GitHub) Añadir el arranque de prueba en la CI con `--remote-debugging-port` (existe `#root` y no hay errores de consola) — verificación: el job falla si la app no carga y pasa si carga
+- [ ] 10.3 (implementado; pendiente de un tag real) Crear `.github/workflows/release.yml` con tags `v*`, firma y notarización y release en borrador con los artefactos y los `latest*.yml` — verificación: un tag de prueba genera el borrador con los instaladores de las 3 plataformas
+- [x] 10.4 Documentar en el README (sección Development) cómo crear un release — verificación: una persona ajena al proyecto puede seguir los pasos hasta el borrador
+- [ ] 10.5 (pendiente: un PR y un tag reales en GitHub) Aceptación de la fase — verificación: un PR ejecuta la matriz completa en verde y un tag de prueba genera el release en borrador con los 3 instaladores
 
 ## 11. Verificación funcional completa (M)
 
