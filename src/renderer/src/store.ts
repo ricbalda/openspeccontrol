@@ -192,18 +192,19 @@ function onServer(m: ServerMsg) {
   }
 }
 
-function notify(title: string, body: string, tag?: string) {
+/** OS notification, through the main process (Fase 5.3): it shows one only while
+ * the window is unfocused, flashes the taskbar for `attention` and refocuses on click. */
+function notify(title: string, body: string, kind: 'info' | 'attention' = 'info') {
   try {
-    if ('Notification' in window && Notification.permission === 'granted')
-      new Notification(title, { body, tag })
+    void window.osc.notify({ title, body, kind })
   } catch {
-    /* ignore */
+    /* preload missing */
   }
 }
 
 function notifyAttention() {
   if (document.hasFocus()) return
-  notify('OpenSpecControl', 'The agent needs your decision')
+  notify('OpenSpecControl', 'The agent needs your decision', 'attention')
 }
 
 const STOP_TEXT: Record<string, string> = {
@@ -223,19 +224,10 @@ function notifyTurnEnd(stopReason: string) {
   const what =
     req?.kind === 'user' ? (req.label ?? req.text.split('\n')[0].slice(0, 80)) : 'The agent'
   const repo = get().repos.find((r) => r.id === get().repo)?.name
-  notify(`${STOP_TEXT[stopReason] ?? stopReason}${repo ? ` · ${repo}` : ''}`, what, 'turn-end')
+  notify(`${STOP_TEXT[stopReason] ?? stopReason}${repo ? ` · ${repo}` : ''}`, what)
   set({ doneUnseen: true })
 }
 
-/** Ask once, from a click, so the browser shows the prompt. */
-function askNotificationPermission() {
-  try {
-    if ('Notification' in window && Notification.permission === 'default')
-      Notification.requestPermission().catch(() => {})
-  } catch {
-    /* ignore */
-  }
-}
 // back from a terminal or git client: the branch may have changed
 if (typeof window !== 'undefined')
   window.addEventListener('focus', () => {
@@ -294,6 +286,14 @@ export async function addRoot(path: string): Promise<boolean> {
   return true
 }
 
+/** Native folder picker (Fase 5.2): adds the chosen folder, or nothing on cancel. */
+export async function browseRoot(): Promise<boolean> {
+  const w = await guard(api.pickFolder()) // null = the user closed the dialog
+  if (!w) return false
+  applyWorkspace(w)
+  return true
+}
+
 export const openAddFolder = (open = true) => set({ addFolderOpen: open })
 
 export async function removeRoot(path: string) {
@@ -332,7 +332,6 @@ export function setAgent(agent: string) {
 }
 
 export function startAgent(resume = true) {
-  askNotificationPermission()
   const { repo, agent } = get()
   if (repo) sendMsg({ type: 'start', repo, agent, resume })
 }
@@ -435,6 +434,12 @@ export async function createChangeBranch(change: string) {
   if (!g) return
   toast(`Switched to the new branch ${g.branch}`)
   await loadGit()
+}
+
+/** Repo header: reveal the current repo in the OS file manager (Fase 5.8). */
+export async function showRepoInExplorer() {
+  const repo = get().repo
+  if (repo) await guard(api.showInExplorer(repo))
 }
 
 /** Commit the files the user confirmed, for the open change (or archived change). */
@@ -584,6 +589,12 @@ export function setTheme(t: 'light' | 'dark' | 'system') {
   ls.set('theme', t)
   if (t === 'system') delete document.documentElement.dataset.theme
   else document.documentElement.dataset.theme = t
+  // Fase 5.6: the title bar and menus follow the same choice
+  try {
+    void window.osc.setNativeTheme(t)
+  } catch {
+    /* preload missing */
+  }
 }
 export const initialTheme = () =>
   (ls.get('theme') as 'light' | 'dark' | 'system' | null) ?? 'system'

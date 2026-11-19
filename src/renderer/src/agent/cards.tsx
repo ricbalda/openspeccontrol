@@ -28,6 +28,7 @@ import {
 } from 'lucide-react'
 import { answerElicitation, answerPermission, sendPrompt, useStore } from '../store.ts'
 import { Badge, Button, Chip, cx, Spinner } from '../lib/ui.tsx'
+import { ExternalAnchor } from '../lib/ExternalLink.tsx'
 import { MiniDiff } from '../review/DiffView.tsx'
 import { cleanTitle, type Item, type ToolItem } from './transcript.ts'
 
@@ -49,7 +50,10 @@ export function MessageView({ text }: { text: string }) {
   const shown = stripResult(text)
   return (
     <div className="md text-[13.5px] text-fg">
-      <Markdown remarkPlugins={[remarkGfm]}>{shown}</Markdown>
+      {/* Fase 5.5: links open in the OS browser, never inside the window */}
+      <Markdown remarkPlugins={[remarkGfm]} components={{ a: ExternalAnchor }}>
+        {shown}
+      </Markdown>
       {hadResult && (
         <div className="mt-1.5">
           <Badge tone="accent">
@@ -299,7 +303,9 @@ export function ElicitationCard({ it }: { it: Extract<Item, { type: 'elicitation
       <div className="flex items-start gap-2">
         <HelpCircle size={16} className="mt-0.5 shrink-0 text-info" />
         <div className="md min-w-0 flex-1 text-[13px] font-medium">
-          <Markdown remarkPlugins={[remarkGfm]}>{it.message}</Markdown>
+          <Markdown remarkPlugins={[remarkGfm]} components={{ a: ExternalAnchor }}>
+            {it.message}
+          </Markdown>
         </div>
       </div>
       <div className="mt-2 space-y-2.5 pl-6">
