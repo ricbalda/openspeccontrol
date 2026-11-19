@@ -9,6 +9,7 @@ import { registerNativeIpc } from './desktop/ipc-native.ts'
 import { trackPendingInteractions } from './desktop/badge.ts'
 import { APP_NAME, APP_USER_MODEL_ID, installAppMenu } from './desktop/menu.ts'
 import { confirmQuit, liveWork } from './desktop/safe-close.ts'
+import { registerUpdater } from './desktop/updater-ipc.ts'
 import { attachRendererHealth } from './desktop/renderer-health.ts'
 import {
   MIN_HEIGHT,
@@ -145,6 +146,15 @@ if (!app.requestSingleInstanceLock()) {
     registerNativeIpc({ core, win: () => mainWindow })
     trackPendingInteractions({ core, getWin: () => mainWindow })
     installAppMenu(sendToRenderer) // Fase 4.6 (also removes autoHideMenuBar)
+    // Fase 9: auto-update (disabled when unpackaged or OSC_NO_UPDATE_CHECK=1); the install quit is pre-confirmed
+    registerUpdater({
+      core,
+      win: () => mainWindow,
+      send: sendToRenderer,
+      beforeInstall: () => {
+        quitting = true
+      }
+    }).start()
     createWindow()
 
     app.on('activate', () => {

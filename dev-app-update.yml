@@ -1,3 +1,8 @@
-provider: generic
-url: https://example.com/auto-updates
+# Configuración de auto-actualización para el modo desarrollo: electron-updater solo
+# la lee con `forceDevUpdateConfig` (la app sin empaquetar nunca busca actualizaciones,
+# ver src/main/desktop/updater.ts). Apunta al mismo origen que `publish` en
+# electron-builder.yml: los releases de GitHub de ricbalda/openspeccontrol.
+provider: github
+owner: ricbalda
+repo: openspeccontrol
 updaterCacheDirName: openspeccontrol-updater

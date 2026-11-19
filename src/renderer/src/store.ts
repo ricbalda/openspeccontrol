@@ -16,10 +16,12 @@ import type {
   RootInfo,
   ServerMsg,
   SessionState,
+  UpdateState,
   Workspace
 } from '@shared/protocol.ts'
 import type { ToolStatus } from '@shared/ipc.ts'
 import { api } from './lib/api.ts'
+import { checkResult } from './lib/update-text.ts'
 
 const ls = {
   get: (k: string) => {
@@ -90,6 +92,8 @@ interface State {
   demoOpen: boolean
   /** a turn finished while the tab was in the background (cleared when it gets focus) */
   doneUnseen: boolean
+  /** estado de la actualización automática (Fase 9); null hasta que main responde */
+  update: UpdateState | null
 }
 
 export const useStore = create<State>(() => ({
@@ -123,7 +127,8 @@ export const useStore = create<State>(() => ({
   addFolderOpen: false,
   diagOpen: false,
   demoOpen: false,
-  doneUnseen: false
+  doneUnseen: false,
+  update: null
 }))
 const set = useStore.setState
 const get = useStore.getState
@@ -169,6 +174,7 @@ let refreshTimer: ReturnType<typeof setTimeout> | undefined
 function onServer(m: ServerMsg) {
   if (m.type === 'error') return toast(m.message, 'error')
   if (m.type === 'menu') return menuAction(m.action) // Fase 4: menú nativo → renderer
+  if (m.type === 'update_state') return void set({ update: m.state }) // Fase 9
   if (m.repo !== get().repo) return
   switch (m.type) {
     case 'session':
@@ -254,6 +260,7 @@ export async function boot() {
   booted = true
   // core events for this page's lifetime; a reload re-subscribes and replays
   window.osc.onMessage(onServer)
+  void loadUpdateState() // Fase 9: el estado puede haber cambiado antes de que la página arrancara
   const cfg = await guard(api.config())
   if (cfg)
     set({
@@ -317,6 +324,34 @@ export const openAddFolder = (open = true) => set({ addFolderOpen: open })
 export const openDiagnostics = (open = true) => set({ diagOpen: open })
 
 export const openDemoRepo = (open = true) => set({ demoOpen: open })
+
+// ---- Fase 9: actualización automática --------------------------------------------
+
+/** El estado actual de la actualización (los cambios siguientes llegan como `update_state`). */
+async function loadUpdateState() {
+  try {
+    set({ update: await api.updateState() })
+  } catch {
+    /* sin puente o main sin updater: la píldora simplemente no aparece */
+  }
+}
+
+/** Ayuda → Buscar actualizaciones…: fuerza la comprobación y avisa del resultado. */
+export async function checkForUpdates() {
+  const s = await guard(api.checkForUpdates())
+  if (!s) return
+  set({ update: s })
+  const r = checkResult(s)
+  toast(r.text, r.level)
+}
+
+/**
+ * "Reiniciar para actualizar a x.y.z": main pide la confirmación de cierre seguro si
+ * hay un agente trabajando o decisiones pendientes y reinicia; Cancelar no hace nada.
+ */
+export async function installUpdate() {
+  await guard(api.installUpdate())
+}
 
 /**
  * Ayuda → Crear repositorio de demostración (Fase 5.7). The main process shows the
@@ -644,8 +679,7 @@ export const initialTheme = () =>
   (ls.get('theme') as 'light' | 'dark' | 'system' | null) ?? 'system'
 
 /** Menu actions (ServerMsg 'menu', Fase 4.6). Cableadas: 'demo-repo' (5.7),
- *  'open-data-folder' (5.8) y 'dependency-diagnostics' (6.4). Pendiente: Fase 9
- *  'check-updates' (9.4), que sigue cayendo en el aviso del default. */
+ *  'open-data-folder' (5.8), 'dependency-diagnostics' (6.4) y 'check-updates' (9.4). */
 export function menuAction(action: MenuAction) {
   switch (action) {
     case 'add-folder':
@@ -663,8 +697,10 @@ export function menuAction(action: MenuAction) {
     case 'dependency-diagnostics':
       openDiagnostics(true)
       break
+    case 'check-updates':
+      void checkForUpdates()
+      break
     default:
-      // marcador para la Fase 9 ('check-updates'): la acción llegó, su implementación aún no existe: la acción llegó, su implementación aún no existe
       toast(`Acción de menú «${action}» pendiente de su fase`)
   }
 }
