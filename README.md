@@ -73,6 +73,8 @@ OpenSpecControl helps you turn an idea into an [OpenSpec](https://github.com/Fis
 
 The application menus (Archivo, Editar, Ver, Ventana, Ayuda) are in Spanish; the rest of the interface is in English.
 
+Guía de uso: [docs/QuickGuide.md](docs/QuickGuide.md)
+
 ## Requirements
 
 | What                         | Why                                                                                                 |
