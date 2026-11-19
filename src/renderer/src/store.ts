@@ -86,6 +86,8 @@ interface State {
   addFolderOpen: boolean
   /** Ayuda → Diagnóstico de dependencias (Fase 6); the Help menu opens it */
   diagOpen: boolean
+  /** Ayuda → Crear repositorio de demostración… (Fase 5.7): the agent picker dialog */
+  demoOpen: boolean
   /** a turn finished while the tab was in the background (cleared when it gets focus) */
   doneUnseen: boolean
 }
@@ -120,6 +122,7 @@ export const useStore = create<State>(() => ({
   toasts: [],
   addFolderOpen: false,
   diagOpen: false,
+  demoOpen: false,
   doneUnseen: false
 }))
 const set = useStore.setState
@@ -312,6 +315,30 @@ export const openAddFolder = (open = true) => set({ addFolderOpen: open })
  * menu.ts) can reach it, like openAddFolder.
  */
 export const openDiagnostics = (open = true) => set({ diagOpen: open })
+
+export const openDemoRepo = (open = true) => set({ demoOpen: open })
+
+/**
+ * Ayuda → Crear repositorio de demostración (Fase 5.7). The main process shows the
+ * native folder picker and creates `hello-app` asynchronously; here we only apply
+ * the refreshed workspace and land on the demo change, waiting in "In review".
+ * false when the picker was cancelled or the creation failed (toasted).
+ */
+export async function createDemo(agent: string | null): Promise<boolean> {
+  const r = await guard(api.createDemoRepo(agent))
+  if (!r) return false // null = the user closed the picker
+  applyWorkspace(r.workspace)
+  for (const w of r.warnings) toast(w, 'error')
+  toast('Demo repository created')
+  selectRepo(r.repo)
+  await loadChanges() // selectRepo already asked; this one is awaitable
+  if (get().repo === r.repo && get().changes.some((c) => c.name === r.change))
+    await openChange(r.change)
+  return true
+}
+
+/** Ayuda → Abrir carpeta de datos (Fase 5.8): errors surface as a toast. */
+export const openDataFolder = () => guard(api.openDataFolder())
 
 export async function removeRoot(path: string) {
   const w = await guard(api.removeRoot(path))
@@ -616,9 +643,9 @@ export function setTheme(t: 'light' | 'dark' | 'system') {
 export const initialTheme = () =>
   (ls.get('theme') as 'light' | 'dark' | 'system' | null) ?? 'system'
 
-/** Menu actions (ServerMsg 'menu', Fase 4.6). Fase 5 sustituye 'add-folder' por el
- *  selector nativo (pickFolder) y cablea 'demo-repo' (5.7) y 'open-data-folder' (5.8);
- *  Fase 6 'dependency-diagnostics' (6.4); Fase 9 'check-updates' (9.4). */
+/** Menu actions (ServerMsg 'menu', Fase 4.6). Cableadas: 'demo-repo' (5.7),
+ *  'open-data-folder' (5.8) y 'dependency-diagnostics' (6.4). Pendiente: Fase 9
+ *  'check-updates' (9.4), que sigue cayendo en el aviso del default. */
 export function menuAction(action: MenuAction) {
   switch (action) {
     case 'add-folder':
@@ -627,8 +654,17 @@ export function menuAction(action: MenuAction) {
     case 'rescan-repos':
       loadRepos(true)
       break
+    case 'demo-repo':
+      openDemoRepo(true) // el diálogo elige el agente; la carpeta la elige main
+      break
+    case 'open-data-folder':
+      void openDataFolder()
+      break
+    case 'dependency-diagnostics':
+      openDiagnostics(true)
+      break
     default:
-      // marcador para Fases 5/6/9: la acción llegó, su implementación aún no existe
+      // marcador para la Fase 9 ('check-updates'): la acción llegó, su implementación aún no existe: la acción llegó, su implementación aún no existe
       toast(`Acción de menú «${action}» pendiente de su fase`)
   }
 }

@@ -16,6 +16,7 @@ import { showAppNotification } from './notifications.ts'
 import { openExternalLink } from './external-links.ts'
 import { applyNativeTheme } from './theme.ts'
 import { openDataFolder, showRepoInExplorer } from './data-folder.ts'
+import { pickAndCreateDemoRepo } from './demo-repo-flow.ts'
 
 const notifyBody = z.object({
   title: z.string().min(1).max(200),
@@ -25,6 +26,7 @@ const notifyBody = z.object({
 const themeSetting = z.enum(['light', 'dark', 'system'])
 const urlBody = z.string().min(1).max(2000)
 const repoBody = z.string().min(1)
+const demoAgentBody = z.string().min(1).max(100).nullable()
 
 /** zod check that fails as code "invalid" (the same shape ipc.ts uses). */
 function check<T extends z.ZodType>(schema: T, data: unknown): z.output<T> {
@@ -76,4 +78,8 @@ export function registerNativeIpc(opts: {
     showRepoInExplorer(check(repoBody, a[0]))
     return { ok: true as const }
   })
+  // Fase 5.7: el selector de carpeta y la creación viven en main; el renderer solo manda el agente
+  handle('createDemoRepo', (a) =>
+    pickAndCreateDemoRepo(core, opts.win(), check(demoAgentBody, a[0] ?? null))
+  )
 }

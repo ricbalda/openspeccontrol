@@ -9,6 +9,7 @@ import { DocReview } from './panes/DocReview.tsx'
 import { AgentPanel } from './panes/AgentPanel.tsx'
 import { AddFolderDialog } from './panes/Folders.tsx'
 import { ToolsDialog } from './panes/ToolsDialog.tsx'
+import { DemoRepoDialog } from './panes/DemoRepoDialog.tsx'
 import { ErrorBoundary } from './lib/ErrorBoundary.tsx'
 import {
   clampAgentWidth,
@@ -172,6 +173,7 @@ export function App() {
       <Toasts />
       <AddFolderDialog />
       <ToolsDialog />
+      <DemoRepoDialog />
     </div>
   )
 }

@@ -170,4 +170,18 @@ describe('native integration channels (Fase 5)', () => {
     await expect(call('openDataFolder', frame)).resolves.toMatchObject({ ok: true })
     expect(state.openedPaths).toEqual([DATA])
   })
+
+  it('createDemoRepo: remitente no fiable, agente inválido o desconocido y cancelación', async () => {
+    state.dialogCalls.length = 0
+    const evil = await call('createDemoRepo', { url: 'https://evil.example' }, null)
+    expect(evil).toEqual({ ok: false, error: { code: 'invalid', message: 'untrusted sender' } })
+    const notString = await call('createDemoRepo', frame, 42)
+    expect(notString.error.code).toBe('invalid')
+    const unknown = await call('createDemoRepo', frame, 'no-such-agent')
+    expect(unknown).toMatchObject({ ok: false, error: { code: 'invalid' } })
+    expect(state.dialogCalls).toHaveLength(0) // ni siquiera se abrió el selector
+    state.dialogResult = { canceled: true, filePaths: [] }
+    await expect(call('createDemoRepo', frame, 'claude')).resolves.toEqual({ ok: true, data: null })
+    expect(state.dialogCalls[0]).toMatchObject({ parent: fakeWin })
+  })
 })
