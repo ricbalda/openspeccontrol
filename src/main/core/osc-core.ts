@@ -21,6 +21,8 @@ import type {
 } from '@shared/protocol.ts'
 import { agents, DEFAULT_AGENT, getAgent } from './agents.ts'
 import { cliViews, closeDb, comments, events, migrateRepoIds, openDb, rounds } from './db.ts'
+import * as drafts from './drafts.ts'
+import type { Draft, DraftSummary } from './drafts.ts'
 import { Hub } from './acp/hub.ts'
 import * as openspec from './openspec.ts'
 import { hasOpenSpec, initDataDir, oscVersion, safeResolve, setVersion } from './repos.ts'
@@ -277,6 +279,39 @@ export class OscCore {
       }
     }
     return { reviewInRepo: reviewInRepo(r) }
+  }
+
+  // ---- drafts (add-proposal-drafts, fase 1) ----------------------------------
+  // métodos delgados: comprueban el repo con repoOf() y delegan en drafts.ts;
+  // las reglas (conflict, too_large, not_found) las impone el módulo
+
+  async drafts(repo: string, query?: string): Promise<DraftSummary[]> {
+    this.repoOf(repo)
+    return drafts.list(repo, query)
+  }
+
+  async draft(id: string): Promise<Draft> {
+    const d = drafts.get(id)
+    if (!d) throw new OscError('not_found', 'draft not found')
+    return d
+  }
+
+  async createDraft(repo: string): Promise<Draft> {
+    this.repoOf(repo)
+    return drafts.create(repo)
+  }
+
+  async saveDraft(id: string, patch: { title?: string; body?: string }): Promise<Draft> {
+    return drafts.save(id, patch)
+  }
+
+  async duplicateDraft(id: string): Promise<Draft> {
+    return drafts.duplicate(id)
+  }
+
+  async deleteDraft(id: string): Promise<{ ok: true }> {
+    drafts.remove(id)
+    return { ok: true }
   }
 
   // ---- review --------------------------------------------------------------
