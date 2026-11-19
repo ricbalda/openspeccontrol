@@ -51,34 +51,26 @@ afterAll(() => {
 }, 120_000)
 
 ;(share ? describe : describe.skip)('WSL as a network folder (tarea 6.5)', () => {
-  it(
-    'adds a repo through \\\\wsl.localhost\\… and lists it',
-    async () => {
-      const added = ws.addRoot(base!)
-      expect(added.toLowerCase().startsWith('\\\\wsl')).toBe(true) // realpath may switch the alias
-      const repos = (await ws.findRepos(true)).repos
-      const repo = repos.find((r) => r.name === 'repo-a')
-      expect(repo).toBeTruthy()
-      expect(repo!.id.toLowerCase().startsWith('\\\\wsl')).toBe(true)
-      // repoPath maps the UNC id back to the folder inside our roots
-      expect(ws.repoPath(repo!.id)).toBeTruthy()
-    },
-    120_000
-  )
+  it('adds a repo through \\\\wsl.localhost\\… and lists it', async () => {
+    const added = ws.addRoot(base!)
+    expect(added.toLowerCase().startsWith('\\\\wsl')).toBe(true) // realpath may switch the alias
+    const repos = (await ws.findRepos(true)).repos
+    const repo = repos.find((r) => r.name === 'repo-a')
+    expect(repo).toBeTruthy()
+    expect(repo!.id.toLowerCase().startsWith('\\\\wsl')).toBe(true)
+    // repoPath maps the UNC id back to the folder inside our roots
+    expect(ws.repoPath(repo!.id)).toBeTruthy()
+  }, 120_000)
 
-  it(
-    'lists the changes of a repo inside WSL (openspec CLI on the Windows side)',
-    async () => {
-      const openspec = await import('../../src/main/core/openspec.ts')
-      const repo = (await ws.findRepos()).repos.find((r) => r.name === 'repo-a')!
-      const probe = await openspec.run(['--version'], repo.id, 10_000)
-      if (!probe.ok) {
-        console.warn('openspec CLI not installed; change listing over UNC not verified here')
-        return
-      }
-      const changes = await openspec.listChanges(repo.id, () => [])
-      expect(changes.map((c) => c.name)).toContain('add-demo')
-    },
-    120_000
-  )
+  it('lists the changes of a repo inside WSL (openspec CLI on the Windows side)', async () => {
+    const openspec = await import('../../src/main/core/openspec.ts')
+    const repo = (await ws.findRepos()).repos.find((r) => r.name === 'repo-a')!
+    const probe = await openspec.run(['--version'], repo.id, 10_000)
+    if (!probe.ok) {
+      console.warn('openspec CLI not installed; change listing over UNC not verified here')
+      return
+    }
+    const changes = await openspec.listChanges(repo.id, () => [])
+    expect(changes.map((c) => c.name)).toContain('add-demo')
+  }, 120_000)
 })

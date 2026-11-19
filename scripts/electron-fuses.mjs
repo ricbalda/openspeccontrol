@@ -31,7 +31,10 @@ function binaryOf(context) {
     platform === 'darwin'
       ? [path.join(context.appOutDir, `${name}.app`, 'Contents', 'MacOS', name)]
       : platform === 'win32'
-        ? [path.join(context.appOutDir, `${name}.exe`), path.join(context.appOutDir, 'openspeccontrol.exe')]
+        ? [
+            path.join(context.appOutDir, `${name}.exe`),
+            path.join(context.appOutDir, 'openspeccontrol.exe')
+          ]
         : [path.join(context.appOutDir, name), path.join(context.appOutDir, name.toLowerCase())]
   const known = candidates.find((p) => fs.existsSync(p))
   if (known) return known

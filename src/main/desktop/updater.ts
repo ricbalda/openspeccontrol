@@ -57,7 +57,6 @@ export interface UpdaterLike {
   autoInstallOnAppQuit: boolean
   allowPrerelease: boolean
   allowDowngrade: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: string, listener: (arg: any) => void): unknown
   checkForUpdates(): Promise<unknown>
   quitAndInstall(isSilent?: boolean, isForceRunAfter?: boolean): void
