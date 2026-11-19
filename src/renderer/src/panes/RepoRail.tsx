@@ -1,77 +1,58 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   Archive,
   Check,
   ChevronDown,
-  ChevronRight,
   Compass,
   FolderGit2,
   FolderOpen,
+  FolderPlus,
   GitBranch,
-  GitMerge,
-  MessageSquare,
-  MoreHorizontal,
-  Pencil,
-  Play,
-  Plus,
+  Power,
   RefreshCw,
   Search,
   Sparkles,
-  Eye,
-  FolderPlus,
-  X,
-  BookOpen,
-  ShieldAlert,
-  ShieldCheck
+  X
 } from 'lucide-react'
-import type { ChangeStage, ChangeSummary, RepoInfo } from '@shared/protocol.ts'
+import type { RepoInfo } from '@shared/protocol.ts'
 import {
+  activateRepo,
+  closeRepo,
   loadRepos,
   openAddFolder,
-  openArchived,
-  openChange,
-  openSpec,
-  setReviewInRepo,
+  openRepo,
   removeRoot,
   runAction,
-  selectRepo,
+  setReviewInRepo,
   showRepoInExplorer,
+  toggleCollapsed,
   useStore
 } from '../store.ts'
-import { issueCounts } from '../review/ValidationPanel.tsx'
-import {
-  Badge,
-  Button,
-  Chip,
-  cx,
-  Dialog,
-  IconButton,
-  Menu,
-  MenuItem,
-  timeAgo,
-  useDismiss
-} from '../lib/ui.tsx'
-
-const STAGES: { id: ChangeStage; label: string; hint: string }[] = [
-  { id: 'draft', label: 'Drafting', hint: 'Planning artifacts in progress' },
-  { id: 'review', label: 'In review', hint: 'Read and comment' },
-  { id: 'ready', label: 'Ready to build', hint: 'Reviewed, not implemented' },
-  { id: 'applying', label: 'Building', hint: 'Tasks in progress' },
-  { id: 'done', label: 'Done', hint: 'Sync specs and archive' }
-]
+import { ErrorBoundary } from '../lib/ErrorBoundary.tsx'
+import { RepoSection } from './RepoSection.tsx'
+import { Badge, Button, Chip, cx, Dialog, IconButton, useDismiss } from '../lib/ui.tsx'
 
 /** Keep the end of a long path, which is the part that tells folders apart. */
 const shortPath = (p: string, max = 46) => (p.length > max ? `…${p.slice(-(max - 1))}` : p)
 
 function RepoPicker() {
-  const { repos, repo, roots, reposLoaded, reviewInRepo, git } = useStore()
+  const { repos, repo, roots, reposLoaded, reviewInRepo, git, openRepos } = useStore()
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const ref = useDismiss<HTMLDivElement>(open, () => setOpen(false))
   const match = (r: RepoInfo) => `${r.name} ${r.rel}`.toLowerCase().includes(q.toLowerCase())
   const cur = repos.find((r) => r.id === repo)
+  // multi-repo-rail (D-G): elegir un repo lo ABRE y lo activa; no cierra los demás
   const pick = (id: string) => {
-    selectRepo(id)
+    const wasOpen = openRepos.includes(id)
+    if (openRepo(id) && !wasOpen) {
+      // D-F: por defecto solo la sección activa queda expandida; el usuario puede
+      // reexpandir las otras (se recuerda en 'rail-collapsed')
+      const { openRepos: now, collapsed } = useStore.getState()
+      for (const r of now) {
+        if (r === id ? collapsed.includes(r) : !collapsed.includes(r)) toggleCollapsed(r)
+      }
+    }
     setOpen(false)
     setQ('')
   }
@@ -189,6 +170,11 @@ function RepoPicker() {
                           <span className="block truncate text-[11px] text-muted">{r.rel}</span>
                         )}
                       </span>
+                      {openRepos.includes(r.id) && (
+                        <Badge tone="accent" className="shrink-0">
+                          open
+                        </Badge>
+                      )}
                       {r.session && (
                         <span className="h-2 w-2 rounded-full bg-ok" title="agent connected" />
                       )}
@@ -240,252 +226,6 @@ function RepoPicker() {
           </div>
         </div>
       )}
-    </div>
-  )
-}
-
-const ART_LABEL: Record<string, string> = {
-  proposal: 'Proposal',
-  specs: 'Specs',
-  design: 'Design',
-  tasks: 'Tasks'
-}
-
-/** Planning artifacts as labeled chips, so they don't read as a progress bar. */
-function ArtifactChips({ c }: { c: ChangeSummary }) {
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {c.artifacts.map((a) => {
-        const done = a.status === 'done'
-        return (
-          <span
-            key={a.id}
-            title={`${ART_LABEL[a.id] ?? a.id}: ${done ? 'written' : a.status === 'ready' ? 'not written yet' : 'blocked'}`}
-            className={cx(
-              'inline-flex items-center gap-0.5 rounded-md px-1.5 py-px text-[10.5px] font-medium',
-              done ? 'bg-ok-soft text-ok' : 'bg-surface-2 text-muted'
-            )}
-          >
-            {done ? (
-              <Check size={10} strokeWidth={3} />
-            ) : (
-              <span className="h-1.5 w-1.5 rounded-full border border-current" />
-            )}
-            {ART_LABEL[a.id] ?? a.id}
-          </span>
-        )
-      })}
-    </div>
-  )
-}
-
-function primaryAction(c: ChangeSummary): { label: string; icon: typeof Play; run: () => void } {
-  switch (c.stage) {
-    case 'draft':
-      return {
-        label: 'Continue',
-        icon: Pencil,
-        run: () => runAction('update', c.name, 'Continue creating the missing planning artifacts.')
-      }
-    case 'review':
-      return { label: 'Review', icon: Eye, run: () => openChange(c.name) }
-    case 'ready':
-      return { label: 'Build it', icon: Play, run: () => runAction('apply', c.name) }
-    case 'applying':
-      return { label: 'Continue', icon: Play, run: () => runAction('apply', c.name) }
-    case 'done':
-      return { label: 'Archive', icon: Archive, run: () => confirmArchive(c.name) }
-  }
-}
-
-/** A small mark when `openspec validate` found problems in the change. */
-function ValidationMark({ c }: { c: ChangeSummary }) {
-  const { errors, warnings } = issueCounts(c)
-  if (!errors && !warnings) return null
-  return (
-    <span
-      className={cx('flex items-center gap-0.5', errors ? 'text-bad' : 'text-warn')}
-      title={`openspec validate: ${errors} error(s), ${warnings} warning(s). Open the change to see them.`}
-    >
-      <ShieldAlert size={11} /> {errors || warnings}
-    </span>
-  )
-}
-
-let confirmArchive: (name: string) => void = () => {}
-
-function ChangeCard({ c }: { c: ChangeSummary }) {
-  const active = useStore((s) => s.change === c.name)
-  const busy = useStore((s) => s.session?.status === 'busy')
-  const hasVerify = useStore((s) => s.workflows.includes('verify'))
-  const p = primaryAction(c)
-  const pct = c.totalTasks ? Math.round((c.completedTasks / c.totalTasks) * 100) : 0
-  return (
-    <div
-      onClick={() => openChange(c.name)}
-      className={cx(
-        'group cursor-pointer rounded-xl border bg-surface p-2.5 transition hover:shadow-sm',
-        active ? 'border-accent ring-2 ring-accent/15' : 'border-line hover:border-line-strong'
-      )}
-    >
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-semibold" title={c.name}>
-            {c.name}
-          </div>
-          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-muted">
-            <span>{timeAgo(c.lastModified)}</span>
-            {c.openComments > 0 && (
-              <span className="flex items-center gap-0.5 text-warn">
-                <MessageSquare size={11} /> {c.openComments}
-              </span>
-            )}
-            <ValidationMark c={c} />
-          </div>
-        </div>
-        <div onClick={(e) => e.stopPropagation()}>
-          <Menu
-            align="right"
-            trigger={(t) => (
-              <IconButton
-                title="More actions"
-                onClick={t}
-                className="opacity-60 group-hover:opacity-100"
-              >
-                <MoreHorizontal size={15} />
-              </IconButton>
-            )}
-          >
-            {(close) => (
-              <>
-                <MenuItem
-                  icon={<Eye />}
-                  onClick={() => {
-                    openChange(c.name)
-                    close()
-                  }}
-                >
-                  Open for review
-                </MenuItem>
-                <MenuItem
-                  icon={<Compass />}
-                  disabled={busy}
-                  onClick={() => {
-                    runAction('explore', undefined, `the change "${c.name}"`)
-                    close()
-                  }}
-                >
-                  Explore with agent
-                </MenuItem>
-                <MenuItem
-                  icon={<Sparkles />}
-                  disabled={busy}
-                  onClick={() => {
-                    runAction('update', c.name)
-                    close()
-                  }}
-                >
-                  Check coherence
-                </MenuItem>
-                <MenuItem
-                  icon={<Play />}
-                  disabled={busy}
-                  onClick={() => {
-                    runAction('apply', c.name)
-                    close()
-                  }}
-                >
-                  Build (apply)
-                </MenuItem>
-                <MenuItem
-                  icon={<ShieldCheck />}
-                  disabled={busy || !hasVerify}
-                  hint={hasVerify ? undefined : 'not installed'}
-                  onClick={() => {
-                    runAction('verify', c.name)
-                    close()
-                  }}
-                >
-                  Verify implementation
-                </MenuItem>
-                <MenuItem
-                  icon={<GitMerge />}
-                  disabled={busy}
-                  onClick={() => {
-                    runAction('sync', c.name)
-                    close()
-                  }}
-                >
-                  Sync specs
-                </MenuItem>
-                <MenuItem
-                  icon={<Archive />}
-                  danger
-                  disabled={busy}
-                  onClick={() => {
-                    confirmArchive(c.name)
-                    close()
-                  }}
-                >
-                  Archive…
-                </MenuItem>
-              </>
-            )}
-          </Menu>
-        </div>
-      </div>
-      <div className="mt-2">
-        <ArtifactChips c={c} />
-      </div>
-      {c.totalTasks > 0 && (
-        <div
-          className="mt-2 flex items-center gap-2"
-          title="Implementation tasks done (tasks.md checkboxes)"
-        >
-          <span className="text-[10.5px] font-medium text-muted">Build</span>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-            <div
-              className="h-full rounded-full bg-accent transition-all"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <span className="text-[10.5px] tabular-nums text-muted">
-            {c.completedTasks}/{c.totalTasks} tasks
-          </span>
-        </div>
-      )}
-      {(c.stage === 'ready' || c.stage === 'applying') && c.nextTask && (
-        <div
-          className="mt-1 truncate text-[11px] text-muted"
-          title={`Next task in tasks.md: ${c.nextTask}`}
-        >
-          Next: {c.nextTask}
-        </div>
-      )}
-      <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-        <div className="flex gap-1.5">
-          {c.stage === 'done' && hasVerify && (
-            <Button
-              size="sm"
-              className="flex-1"
-              disabled={busy}
-              onClick={() => runAction('verify', c.name)}
-              title="Ask the agent to check the code against the specs, tasks and design before archiving"
-            >
-              <ShieldCheck size={13} /> Verify
-            </Button>
-          )}
-          <Button
-            size="sm"
-            variant={c.stage === 'review' ? 'secondary' : 'primary'}
-            className="flex-1"
-            disabled={busy && c.stage !== 'review'}
-            onClick={p.run}
-          >
-            <p.icon size={13} /> {p.label}
-          </Button>
-        </div>
-      </div>
     </div>
   )
 }
@@ -628,25 +368,73 @@ function ArchiveDialog({ name, onClose }: { name: string | null; onClose: () => 
   )
 }
 
+/** Confirmación de cierre de un repo con sesión viva (D-E, tarea 3.5). Cancelar lo
+ *  deja todo como estaba; cerrar manda `stop` y luego `unsubscribe`. */
+function CloseRepoDialog({
+  ask,
+  settle
+}: {
+  ask: { repo: string } | null
+  settle: (ok: boolean) => void
+}) {
+  const name = useStore((s) =>
+    ask ? (s.repos.find((r) => r.id === ask.repo)?.name ?? ask.repo) : ''
+  )
+  return (
+    <Dialog
+      open={!!ask}
+      onClose={() => settle(false)}
+      title="Close repository"
+      footer={
+        <>
+          <Button variant="ghost" onClick={() => settle(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={() => settle(true)}>
+            <Power size={14} /> Close and disconnect
+          </Button>
+        </>
+      }
+    >
+      <p className="text-[13.5px] text-fg-2">
+        Close <b className="text-fg">{name}</b> and disconnect its agent?
+      </p>
+      <p className="mt-2 text-[12.5px] text-muted">
+        The agent session stops and the repository stops being watched. Opening it again from the
+        picker brings its changes back.
+      </p>
+    </Dialog>
+  )
+}
+
+/**
+ * multi-repo-rail (D-F): el rail es el contenedor: selector arriba y una
+ * `RepoSection` plegable por repo abierto, cada una en su propio ErrorBoundary
+ * para que una sección que falle no tire las demás.
+ */
 export function RepoRail() {
-  const { changes, archived, specs, browse, repo, repos, changesLoaded } = useStore()
+  const openRepos = useStore((s) => s.openRepos)
+  const repos = useStore((s) => s.repos)
   const [newOpen, setNewOpen] = useState(false)
   const [archiveName, setArchiveName] = useState<string | null>(null)
-  const [showArchived, setShowArchived] = useState(false)
-  const [showSpecs, setShowSpecs] = useState(false)
-  confirmArchive = setArchiveName
-  const [filter, setFilter] = useState('')
-  // newest first within a stage; the filter matches the change name
-  const grouped = useMemo(() => {
-    const q = filter.trim().toLowerCase()
-    const shown = changes
-      .filter((c) => !q || c.name.toLowerCase().includes(q))
-      .sort((a, b) => b.lastModified.localeCompare(a.lastModified))
-    return STAGES.map((s) => ({ ...s, items: shown.filter((c) => c.stage === s.id) })).filter(
-      (g) => g.items.length
-    )
-  }, [changes, filter])
-  const hasOpenSpec = repos.find((r) => r.id === repo)?.openspec
+  const [closeAsk, setCloseAsk] = useState<{ repo: string; resolve: (ok: boolean) => void } | null>(
+    null
+  )
+
+  /** Interactuar con la sección de un repo en segundo plano lo activa antes (D-D). */
+  const focusRepo = (repo: string) => {
+    if (useStore.getState().repo !== repo) activateRepo(repo)
+  }
+  const askClose = (repo: string) => {
+    // closeRepo solo llama a confirm si hay sesión viva (D-E): sin agente se cierra directo
+    void closeRepo(repo, {
+      confirm: () => new Promise<boolean>((resolve) => setCloseAsk({ repo, resolve }))
+    })
+  }
+  const settleClose = (ok: boolean) => {
+    closeAsk?.resolve(ok)
+    setCloseAsk(null)
+  }
 
   return (
     <nav className="flex h-full min-h-0 flex-col border-r border-line bg-bg">
@@ -659,142 +447,32 @@ export function RepoRail() {
       <div className="px-3 pb-3">
         <RepoPicker />
       </div>
-
-      {repo && hasOpenSpec && (
-        <>
-          <div className="px-3 pb-2">
-            <Button variant="primary" size="lg" className="w-full" onClick={() => setNewOpen(true)}>
-              <Plus size={16} /> New change
-            </Button>
-          </div>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 pb-14 pt-1">
-            {!changesLoaded &&
-              [0, 1].map((i) => (
-                <div
-                  key={i}
-                  className="h-28 animate-pulse rounded-xl border border-line bg-surface"
+      {openRepos.length > 0 && (
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pb-14 pt-1">
+          {openRepos.map((id) => {
+            const name = repos.find((r) => r.id === id)?.name ?? id
+            return (
+              <ErrorBoundary key={id} name={`Repository ${name}`}>
+                <RepoSection
+                  id={id}
+                  onNewChange={(repo) => {
+                    focusRepo(repo)
+                    setNewOpen(true)
+                  }}
+                  onArchive={(repo, change) => {
+                    focusRepo(repo)
+                    setArchiveName(change)
+                  }}
+                  onClose={askClose}
                 />
-              ))}
-            {changesLoaded && !changes.length && (
-              <div className="px-2 py-6 text-center text-xs text-muted">No active changes yet.</div>
-            )}
-            {changes.length >= 4 && (
-              <div className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1">
-                <Search size={13} className="text-muted" />
-                <input
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  placeholder="Filter changes…"
-                  aria-label="Filter changes"
-                  className="min-w-0 flex-1 bg-transparent text-[12.5px] outline-none"
-                />
-                {filter && (
-                  <button
-                    type="button"
-                    onClick={() => setFilter('')}
-                    title="Clear filter"
-                    className="text-muted hover:text-fg"
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
-            )}
-            {changes.length > 0 && !grouped.length && (
-              <div className="px-2 py-3 text-center text-xs text-muted">
-                No change matches &quot;{filter}&quot;.
-              </div>
-            )}
-            {grouped.map((g) => (
-              <section key={g.id}>
-                <div className="mb-1.5 flex items-baseline gap-2 px-1">
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-fg-2">
-                    {g.label}
-                  </h3>
-                  <span className="text-[11px] text-muted">{g.items.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {g.items.map((c) => (
-                    <ChangeCard key={c.name} c={c} />
-                  ))}
-                </div>
-              </section>
-            ))}
-            {specs.length > 0 && (
-              <section>
-                <button
-                  type="button"
-                  onClick={() => setShowSpecs(!showSpecs)}
-                  className="flex items-center gap-1 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted hover:text-fg-2"
-                  title="The main specs: what the system does today (openspec/specs)"
-                >
-                  {showSpecs ? <ChevronDown size={12} /> : <ChevronRight size={12} />} Specs{' '}
-                  <span className="font-normal">{specs.length}</span>
-                </button>
-                {showSpecs && (
-                  <ul className="mt-1.5 space-y-0.5">
-                    {specs.map((s) => (
-                      <li key={s.name}>
-                        <button
-                          type="button"
-                          onClick={() => openSpec(s.name)}
-                          title={`openspec/${s.file}`}
-                          className={cx(
-                            'flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-[12.5px] hover:bg-surface-2',
-                            browse?.kind === 'spec' && browse.name === s.name
-                              ? 'bg-accent-soft text-accent'
-                              : 'text-fg-2'
-                          )}
-                        >
-                          <BookOpen size={13} className="shrink-0 opacity-70" />
-                          <span className="min-w-0 flex-1 truncate font-mono">{s.name}</span>
-                          <span className="text-[10.5px] tabular-nums text-muted">
-                            {s.requirements} req
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            )}
-            {archived.length > 0 && (
-              <section>
-                <button
-                  onClick={() => setShowArchived(!showArchived)}
-                  className="flex items-center gap-1 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted hover:text-fg-2"
-                >
-                  {showArchived ? <ChevronDown size={12} /> : <ChevronRight size={12} />} Archived{' '}
-                  <span className="font-normal">{archived.length}</span>
-                </button>
-                {showArchived && (
-                  <ul className="mt-1.5 space-y-0.5">
-                    {archived.map((a) => (
-                      <li key={a}>
-                        <button
-                          type="button"
-                          onClick={() => openArchived(a)}
-                          title={`openspec/changes/archive/${a}`}
-                          className={cx(
-                            'w-full truncate rounded-lg px-2 py-1 text-left font-mono text-[11.5px] hover:bg-surface-2',
-                            browse?.kind === 'archived' && browse.name === a
-                              ? 'bg-accent-soft text-accent'
-                              : 'text-muted hover:text-fg-2'
-                          )}
-                        >
-                          {a}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            )}
-          </div>
-        </>
+              </ErrorBoundary>
+            )
+          })}
+        </div>
       )}
       <NewChangeDialog open={newOpen} onClose={() => setNewOpen(false)} />
       <ArchiveDialog name={archiveName} onClose={() => setArchiveName(null)} />
+      <CloseRepoDialog ask={closeAsk} settle={settleClose} />
     </nav>
   )
 }

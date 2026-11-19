@@ -19,12 +19,12 @@
 
 ## 3. Secciones del rail
 
-- [ ] 3.1 Extraer el contenido de `RepoRail` a `RepoSection` leyendo de la `RepoView` de cada repo (activo: proyección; en segundo plano: `views[repo]`), con `NewChangeButton`, filtro, etapas, `SpecsSection` y `ArchivedSection` — verificación: pruebas de renderer con dos repos: cada sección muestra sus cambios y no los del otro
-- [ ] 3.2 Cabecera de sección: chevron de plegado, nombre, rama, estado del agente con número de decisiones pendientes y botón de cerrar; borde de acento en la activa; un `ErrorBoundary` por sección — verificación: prueba de que plegar oculta el cuerpo y recuerda el estado, y de que una sección que falla no tira a las demás
-- [ ] 3.3 Convertir `RepoPicker` en «abrir repo»: marca los abiertos, abre y activa al elegir, mantiene `AddFolderButton` y `ExplorerButton` junto al selector — verificación: prueba de renderer: elegir un segundo repo lo añade al rail sin cerrar el primero
-- [ ] 3.4 `ChangeCard` en un repo en segundo plano: clic y acciones del menú activan primero ese repo — verificación: prueba de que «Build (apply)» en la tarjeta de B llama a la acción con el repo B
-- [ ] 3.5 Confirmación de cierre para repos con agente (`Dialog` con «Cancel» y «Close and disconnect») — verificación: prueba de renderer del diálogo en ambos caminos
-- [ ] 3.6 Criterio de aceptación de la fase: `npm run typecheck`, `npm run lint` y `npm test` pasan; con un solo repo abierto el rail se ve como antes con una sección
+- [x] 3.1 Extraer el contenido de `RepoRail` a `RepoSection` leyendo de la `RepoView` de cada repo (activo: proyección; en segundo plano: `views[repo]`), con `NewChangeButton`, filtro, etapas, `SpecsSection` y `ArchivedSection` — verificación: pruebas de renderer con dos repos: cada sección muestra sus cambios y no los del otro
+- [x] 3.2 Cabecera de sección: chevron de plegado, nombre, rama, estado del agente con número de decisiones pendientes y botón de cerrar; borde de acento en la activa; un `ErrorBoundary` por sección — verificación: prueba de que plegar oculta el cuerpo y recuerda el estado, y de que una sección que falla no tira a las demás
+- [x] 3.3 Convertir `RepoPicker` en «abrir repo»: marca los abiertos, abre y activa al elegir, mantiene `AddFolderButton` y `ExplorerButton` junto al selector — verificación: prueba de renderer: elegir un segundo repo lo añade al rail sin cerrar el primero
+- [x] 3.4 `ChangeCard` en un repo en segundo plano: clic y acciones del menú activan primero ese repo — verificación: prueba de que «Build (apply)» en la tarjeta de B llama a la acción con el repo B
+- [x] 3.5 Confirmación de cierre para repos con agente (`Dialog` con «Cancel» y «Close and disconnect») — verificación: prueba de renderer del diálogo en ambos caminos
+- [x] 3.6 Criterio de aceptación de la fase: `npm run typecheck`, `npm run lint` y `npm test` pasan; con un solo repo abierto el rail se ve como antes con una sección
 
 ## 4. Avisos en segundo plano
 
