@@ -167,8 +167,33 @@ export function sendMsg(m: ClientMsg) {
 // The server replays at most this many events (db.ts events.list); keep the live
 // transcript to the same window so a long session doesn't slow the page down.
 const MAX_EVENTS = 2000
-const appendEvent = (list: LoggedEvent[], e: LoggedEvent) =>
-  list.length >= MAX_EVENTS ? [...list.slice(list.length - MAX_EVENTS + 1), e] : [...list, e]
+const appendEvents = (list: LoggedEvent[], batch: LoggedEvent[]) => {
+  const all = list.concat(batch)
+  return all.length > MAX_EVENTS ? all.slice(all.length - MAX_EVENTS) : all
+}
+
+// Fase 11 (tarea 11.5): a long turn streams thousands of events. Applying each one
+// re-folded the log and re-rendered the whole transcript (~30 ms apiece, ~80 s for
+// 2500 events, with the page frozen). Events are buffered and applied in one batch
+// every EVENT_BATCH_MS; the ones the user must see at once flush the buffer first.
+const EVENT_BATCH_MS = 80
+const SHOW_NOW = new Set(['user', 'permission', 'elicitation', 'turn_end'])
+let pendingEvents: LoggedEvent[] = []
+let pendingTimer: ReturnType<typeof setTimeout> | undefined
+function flushEvents() {
+  clearTimeout(pendingTimer)
+  pendingTimer = undefined
+  if (!pendingEvents.length) return
+  const batch = pendingEvents
+  pendingEvents = []
+  set((s) => ({ events: appendEvents(s.events, batch) }))
+}
+/** A replay or a change of repo replaces the log: what was buffered belongs to the old one. */
+function dropPendingEvents() {
+  clearTimeout(pendingTimer)
+  pendingTimer = undefined
+  pendingEvents = []
+}
 
 let refreshTimer: ReturnType<typeof setTimeout> | undefined
 function onServer(m: ServerMsg) {
@@ -185,10 +210,13 @@ function onServer(m: ServerMsg) {
       }))
       break
     case 'replay':
+      dropPendingEvents()
       set({ events: m.entries })
       break
     case 'event':
-      set((s) => ({ events: appendEvent(s.events, m.entry) }))
+      pendingEvents.push(m.entry)
+      if (SHOW_NOW.has(m.entry.event.kind)) flushEvents()
+      else pendingTimer ??= setTimeout(flushEvents, EVENT_BATCH_MS)
       if (m.entry.event.kind === 'permission' || m.entry.event.kind === 'elicitation')
         notifyAttention()
       if (m.entry.event.kind === 'turn_end') {
@@ -280,7 +308,8 @@ export async function boot() {
 const applyWorkspace = (w: Workspace) => {
   set({ roots: w.roots, repos: w.repos, reposLoaded: true })
   const { repo } = get()
-  if (repo && !w.repos.some((r) => r.id === repo))
+  if (repo && !w.repos.some((r) => r.id === repo)) {
+    dropPendingEvents()
     set({
       repo: null,
       session: null,
@@ -292,6 +321,7 @@ const applyWorkspace = (w: Workspace) => {
       file: null,
       content: ''
     })
+  }
 }
 
 export async function loadRepos(refresh = false) {
@@ -381,6 +411,7 @@ export async function removeRoot(path: string) {
 }
 
 export function selectRepo(id: string) {
+  dropPendingEvents()
   ls.set('repo', id)
   const agent = ls.get(`agent:${id}`) || get().defaultAgent
   set({
