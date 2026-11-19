@@ -142,7 +142,8 @@ describe('store.sendDraft (tarea 3.2, design D-5)', () => {
     await expect(sendDraft('d1', 'propose')).resolves.toBe(true)
     expect(osc.sendDraft).toHaveBeenCalledWith('d1', 'propose')
     expect(osc.drafts).toHaveBeenCalledWith(A, undefined)
-    expect(osc.draft).toHaveBeenCalledWith('d1')
+    // el openDraft real solo fija browse (el DraftEditor de la fase 5 carga el
+    // borrador): el enviado sigue abierto y el historial quedó recargado
     expect(useStore.getState().browse).toEqual({ kind: 'draft', id: 'd1' })
     expect(useStore.getState().draftsByRepo[A]).toEqual([summary('d1')])
   })
