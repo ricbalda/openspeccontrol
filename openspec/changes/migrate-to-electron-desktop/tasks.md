@@ -1,6 +1,6 @@
 # Tasks
 
-Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). Cada fase termina con su criterio de aceptación. Rutas de origen relativas a `../../openspec-studio`.
+Numeración = fases y tareas de `docsplan/plan-migracion-electron.md` (sección 6). Cada fase termina con su criterio de aceptación. Rutas de origen relativas a `../../openspec-studio`.
 
 ## 0. Spike de validación (M)
 
@@ -139,7 +139,7 @@ Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). 
 
 - [x] 12.1 (Quick start no probado en máquina limpia; aún no hay release publicado) Alinear el `README.md` (ya renombrado a OpenSpecControl) con la arquitectura final: corregir lo que hoy contradice el plan (servidor local, Hono/WebSocket/Biome en el stack, roadmap web-primero, requisito de Node 24 por `node:sqlite`, adaptadores empaquetados), añadir CodeBuddy, dejar Orca y el tablero multi-cambio como roadmap posterior y añadir Quick start con instaladores, prerrequisitos, diagrama IPC, `OSC_*`, plataformas, troubleshooting, seguridad, desarrollo, "What OpenSpecControl writes" (`~/.openspeccontrol` y el `userData` de Electron) y licencia/créditos a OpenSpec Studio — verificación: `grep -ri "openspecmonitor\|Hono\|Biome" README.md` sin resultados y el Quick start se sigue en una máquina limpia
 - [x] 12.2 Actualizar `CLAUDE.md` (comandos, arquitectura main/preload/renderer/core, contrato `window.osc`, nombres de la tabla 1.1 y reglas de seguridad) — verificación: ya no describe la plantilla ni `window.api`
-- [ ] 12.3 (parcial: review.png y agent-panel.png generadas en Docs/img del repo principal, pero Docs/ está en .gitignore: los enlaces del README se rompen en GitHub hasta mover las imágenes a una ruta versionada) Regenerar las capturas de `Docs/img/*.png` sobre la app de escritorio — verificación: las imágenes enlazadas en el README existen
+- [ ] 12.3 (parcial: review.png y agent-panel.png generadas en Docs/img del repo principal, que estaba en .gitignore; movidas a docs/img (versionada) y docsplan/ pasa a ser la carpeta ignorada) Regenerar las capturas de `docs/img/*.png` sobre la app de escritorio — verificación: las imágenes enlazadas en el README existen
 - [x] 12.4 Añadir la nota de migración desde OpenSpec Studio (importación automática, `STUDIO_*` → `OSC_*`, convivencia de archivos de revisión, no usar ambas apps sobre el mismo repo) — verificación: la nota aparece en el README
 - [x] 12.5 Aceptación de la fase — verificación: el README no menciona `npm install -g openspec-studio`, el puerto 3940 ni `STUDIO_*`, salvo en la nota de migración
 

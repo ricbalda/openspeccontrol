@@ -9,7 +9,7 @@ tsconfig.json
 tsconfig.*.json
 # OpenSpec specs and the migration plan are authored documents, not code
 openspec
-Docs
+docsplan
 .backup-fix-npm
 # local agent/tool configuration
 opencode.json

@@ -2,7 +2,7 @@
 
 ## Context
 
-Motivación y alcance en `proposal.md`; este documento recoge el **cómo**. Detalle ampliado en `Docs/plan-migracion-electron.md` (secciones 3–5 y 8).
+Motivación y alcance en `proposal.md`; este documento recoge el **cómo**. Detalle ampliado en `docsplan/plan-migracion-electron.md` (secciones 3–5 y 8).
 
 **Origen:** OpenSpec Studio 0.3.1 (`../../openspec-studio`, solo lectura): `server/src/index.ts` (447 líneas: ~20 endpoints REST, WebSocket `/ws`, watcher por repo, arranque), `acp/hub.ts`, `agents.ts`, `db.ts` (`node:sqlite`), `openspec.ts`, `git.ts`, `proc.ts`, `review/*`, `repos.ts`, `workspace.ts`, `schemas.ts`, `security.ts`, `updates.ts`; `web/src` (React 19 + zustand + Tailwind 4); `shared/protocol.ts` y `shared/anchor.ts`.
 
@@ -84,7 +84,7 @@ Main (ESM)
         └─ procesos hijo: agentes ACP (stdio, cwd = repo), `openspec --json`, `git`  (cross-spawn / killTree)
 ```
 
-**Estructura de carpetas:** `src/main/{index.ts, ipc.ts, core/, desktop/}`, `src/preload/`, `src/renderer/{index.html, src/}`, `src/shared/{protocol.ts, anchor.ts, ipc.ts}`, `test/main/`, `test/renderer/`, `scripts/`, `build/`, `resources/`, `Docs/`, `openspec/`. Se conservan `main`/`preload`/`renderer` porque son las rutas por defecto de electron-vite.
+**Estructura de carpetas:** `src/main/{index.ts, ipc.ts, core/, desktop/}`, `src/preload/`, `src/renderer/{index.html, src/}`, `src/shared/{protocol.ts, anchor.ts, ipc.ts}`, `test/main/`, `test/renderer/`, `scripts/`, `build/`, `resources/`, `docs/`, `docsplan/`, `openspec/`. Se conservan `main`/`preload`/`renderer` porque son las rutas por defecto de electron-vite.
 
 **Mapa de módulos** (origen → destino):
 
