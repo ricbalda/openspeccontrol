@@ -174,6 +174,8 @@ export class AgentSession {
   private reply = ''
   private turnUsage = new TurnUsageMeter()
   private stderrTail: string[] = []
+  /** set by stop(): the exit that follows is ours, not a crash worth an error notice */
+  private stopping = false
 
   constructor(
     readonly repo: string,
@@ -198,7 +200,9 @@ export class AgentSession {
       this.cancelPending()
       if (this.status !== 'error') {
         this.status = 'exited'
-        if (code)
+        // Fase 11: killing the tree on Windows (taskkill /F) exits with code 1, and the
+        // late notice also landed after shutdown() had closed the db
+        if (code && !this.stopping)
           this.emit({
             kind: 'notice',
             level: 'error',
@@ -467,6 +471,7 @@ export class AgentSession {
   }
 
   stop() {
+    this.stopping = true
     this.cancelPending()
     this.conn.close()
     killTree(this.proc)
