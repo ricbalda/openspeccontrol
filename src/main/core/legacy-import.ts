@@ -24,6 +24,25 @@ const MARKER = 'imported-from-studio.json'
 const q = (f: string) => `'${f.replace(/'/g, "''")}'` // SQL string literal
 
 /**
+ * A read-only SQLite connection to a WAL database cannot clean up on close, so
+ * importing leaves a `-shm` (and a 0-byte `-wal`) next to Studio's studio.db.
+ * Remove what we created — never a `-wal` that was already there (it may hold
+ * Studio's uncommitted commits) or that grew (a 0-byte one is empty by design).
+ */
+function removeOurSidecars(sourceDb: string, existedBefore: Set<string>): void {
+  for (const suffix of ['-wal', '-shm']) {
+    const file = `${sourceDb}${suffix}`
+    if (existedBefore.has(file)) continue
+    try {
+      if (suffix === '-wal' && fs.statSync(file).size > 0) continue
+      fs.rmSync(file, { force: true })
+    } catch {
+      /* best effort: the db content itself is never touched */
+    }
+  }
+}
+
+/**
  * Copy Studio's data into `to`. Consistent even while Studio is open: the source
  * db is opened read-only and copied with VACUUM INTO. When it cannot be done
  * (origin absent or damaged, target already imported) nothing is written and the
@@ -40,11 +59,13 @@ export function importFromStudio(opts: { from: string; to: string }): StudioImpo
   // VACUUM INTO refuses to overwrite: build the copy under a temp name, then move it in
   const tmp = path.join(opts.to, `${DB_NAME}.import-${process.pid}.tmp`)
   try {
+    const sidecars = new Set([`${sourceDb}-wal`, `${sourceDb}-shm`].filter((f) => fs.existsSync(f)))
     const src = new DatabaseSync(sourceDb, { readOnly: true })
     try {
       src.exec(`VACUUM INTO ${q(tmp)}`)
     } finally {
       src.close()
+      removeOurSidecars(sourceDb, sidecars)
     }
     fs.renameSync(tmp, targetDb)
     files.push(DB_NAME)
