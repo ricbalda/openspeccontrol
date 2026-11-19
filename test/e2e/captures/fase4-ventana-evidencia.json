@@ -1,0 +1,282 @@
+{
+  "startedAt": "2026-11-19T21:13:16.448Z",
+  "steps": [
+    {
+      "step": "4.3 ventana visible tras ready-to-show",
+      "at": "2026-11-19T21:13:18.532Z",
+      "cdpListoMs": 583,
+      "visibleMs": 113,
+      "nota": "visibleMs se mide desde que empieza la espera (con CDP ya listo); el primer fotograma se captura con PrintWindow en cuanto la ventana es visible: si trae la UI ya pintada, show() no se llamó antes de ready-to-show",
+      "tema": "oscuro",
+      "primerFotogramaRgb": [
+        23,
+        23,
+        25
+      ],
+      "esquinaSupIzq": [
+        32,
+        32,
+        32
+      ],
+      "fondoEsperadoRgb": [
+        17,
+        17,
+        20
+      ],
+      "captura": "test\\e2e\\captures\\fase4-ventana-primer-fotograma.png"
+    },
+    {
+      "step": "escala de monitor",
+      "at": "2026-11-19T21:13:19.313Z",
+      "fisico": {
+        "left": 160,
+        "width": 1600,
+        "top": 10,
+        "height": 1000
+      },
+      "dip": {
+        "x": 128,
+        "y": 8,
+        "w": 1280,
+        "h": 800,
+        "dpr": 1.25
+      },
+      "scale": 1.25
+    },
+    {
+      "step": "4.1 segunda instancia",
+      "at": "2026-11-19T21:13:25.362Z",
+      "pid": 23048,
+      "exitCode": 0,
+      "duracionMs": 620,
+      "mismaUserDataDir": "C:\\Users\\ricba\\AppData\\Local\\Temp\\osc-fase4-3bYRWI\\profile"
+    },
+    {
+      "step": "4.1 primera instancia tras second-instance",
+      "at": "2026-11-19T21:13:30.079Z",
+      "viva": true,
+      "visible": true,
+      "minimizada": false,
+      "primerPlano": true,
+      "waitForeground": {
+        "ok": true,
+        "rect": {
+          "left": 160,
+          "width": 1600,
+          "top": 10,
+          "height": 1000
+        },
+        "elapsedMs": 133
+      },
+      "procesosAntes": 3,
+      "procesosDespues": 3,
+      "pidsExeAntes": [
+        31540,
+        61240,
+        13884,
+        33708
+      ],
+      "pidsExeDespues": [
+        31540,
+        61240,
+        13884,
+        33708
+      ],
+      "arbolDespues": [
+        "61240 electron.exe",
+        "13884 electron.exe",
+        "33708 electron.exe"
+      ]
+    },
+    {
+      "step": "instancia A: proceso salió",
+      "at": "2026-11-19T21:13:32.407Z",
+      "code": 0
+    },
+    {
+      "step": "4.1→4.2 cierre de la instancia de 4.1",
+      "at": "2026-11-19T21:13:32.407Z",
+      "exitCode": 0
+    },
+    {
+      "step": "instancia 4.2: arranque",
+      "at": "2026-11-19T21:13:36.194Z",
+      "rect": {
+        "left": 160,
+        "width": 1600,
+        "top": 10,
+        "height": 1000
+      },
+      "zoomed": false,
+      "iconic": false,
+      "visible": true,
+      "windowStateJson": {
+        "width": 1280,
+        "height": 800,
+        "x": 128,
+        "y": 8,
+        "maximized": false
+      }
+    },
+    {
+      "step": "4.2 mover/redimensionar",
+      "at": "2026-11-19T21:13:38.907Z",
+      "mecanismo": "moveTo/resizeTo",
+      "pedidoDip": {
+        "x": 120,
+        "y": 90,
+        "w": 1100,
+        "h": 700
+      },
+      "fisicoEstable": {
+        "left": 150,
+        "width": 1375,
+        "top": 20,
+        "height": 875
+      },
+      "dipEstable": {
+        "x": 120,
+        "y": 16,
+        "w": 1100,
+        "h": 700
+      }
+    },
+    {
+      "step": "instancia 4.2: proceso salió",
+      "at": "2026-11-19T21:13:40.458Z",
+      "code": 0
+    },
+    {
+      "step": "4.2 cierre normal",
+      "at": "2026-11-19T21:13:40.459Z",
+      "exitCode": 0,
+      "windowStateJson": {
+        "width": 1100,
+        "height": 700,
+        "x": 120,
+        "y": 16,
+        "maximized": false
+      }
+    },
+    {
+      "step": "4.2 reabrir restaura bounds",
+      "at": "2026-11-19T21:13:43.077Z",
+      "dipRestaurado": {
+        "x": 120,
+        "y": 16,
+        "width": 1103.2,
+        "height": 703.2
+      },
+      "guardado": {
+        "width": 1100,
+        "height": 700,
+        "x": 120,
+        "y": 16,
+        "maximized": false
+      }
+    },
+    {
+      "step": "reabierta 1: proceso salió",
+      "at": "2026-11-19T21:13:45.615Z",
+      "code": 0
+    },
+    {
+      "step": "4.2 maximizado",
+      "at": "2026-11-19T21:13:45.616Z",
+      "exitCode": 0,
+      "windowStateJson": {
+        "width": 1104,
+        "height": 704,
+        "x": 120,
+        "y": 16,
+        "maximized": true
+      }
+    },
+    {
+      "step": "4.2 deriva por ciclo de reapertura",
+      "at": "2026-11-19T21:13:45.616Z",
+      "deltaWidthDip": 4,
+      "deltaHeightDip": 4,
+      "nota": "borde DWM contado por getNormalBounds al reabrir en 125% de escala"
+    },
+    {
+      "step": "4.2 reabrir maximizada",
+      "at": "2026-11-19T21:13:47.426Z",
+      "zoomed": true
+    },
+    {
+      "step": "4.2 restaurar tras maximizado",
+      "at": "2026-11-19T21:13:49.623Z",
+      "dip": {
+        "x": 120,
+        "y": 16,
+        "width": 1104,
+        "height": 704
+      }
+    },
+    {
+      "step": "reabierta 2: proceso salió",
+      "at": "2026-11-19T21:13:50.577Z",
+      "code": 0
+    },
+    {
+      "step": "4.2 estado fuera de pantalla inyectado",
+      "at": "2026-11-19T21:13:50.581Z",
+      "json": {
+        "width": 1100,
+        "height": 700,
+        "x": -5000,
+        "y": -4000,
+        "maximized": false
+      }
+    },
+    {
+      "step": "4.2 reaparece dentro de la pantalla",
+      "at": "2026-11-19T21:13:55.384Z",
+      "dip": {
+        "x": 218.4,
+        "y": 58.4,
+        "width": 1100.8,
+        "height": 700.8
+      },
+      "visible": true
+    },
+    {
+      "step": "reabierta 3 (off-screen): proceso salió",
+      "at": "2026-11-19T21:13:57.659Z",
+      "code": 0
+    },
+    {
+      "step": "4.2 tamaño mínimo respetado",
+      "at": "2026-11-19T21:14:00.246Z",
+      "guardado": {
+        "w": 500,
+        "h": 300
+      },
+      "dip": {
+        "x": 60,
+        "y": 60,
+        "width": 1026.4,
+        "height": 640
+      }
+    },
+    {
+      "step": "reabierta 4 (mínimo): proceso salió",
+      "at": "2026-11-19T21:14:01.266Z",
+      "code": 0
+    },
+    {
+      "step": "cierre final",
+      "at": "2026-11-19T21:14:01.267Z",
+      "exitCode": 0,
+      "windowStateJson": {
+        "width": 1027,
+        "height": 640,
+        "x": 60,
+        "y": 60,
+        "maximized": false
+      }
+    }
+  ],
+  "finishedAt": "2026-11-19T21:14:02.508Z"
+}

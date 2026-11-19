@@ -1,0 +1,87 @@
+{
+  "startedAt": "2026-11-19T21:09:31.134Z",
+  "steps": [
+    {
+      "step": "4.8 identidad en dev (electron .)",
+      "at": "2026-11-19T21:09:37.876Z",
+      "appGetName": "OpenSpecControl",
+      "appGetVersion": "0.1.0",
+      "tituloVentana": "OpenSpecControl",
+      "barraDeTareas": {
+        "antes": {
+          "presente": true,
+          "ventanas": 1,
+          "boton": "Electron - 1 ventana de ejecución"
+        },
+        "despues": {
+          "presente": true,
+          "ventanas": 3,
+          "boton": "Electron- 3 ventanas de ejecución"
+        },
+        "presente": true,
+        "decisivo": true
+      },
+      "propiedadAumidDeLaVentana": "vt=0",
+      "nota": "app.setAppUserModelId fija el AUMID del proceso; la propiedad de ventana sale vacía (vt=0). La lectura externa válida es el Appid del botón de la barra de tareas.",
+      "exe": "electron"
+    },
+    {
+      "step": "4.8 metadatos del .exe empaquetado",
+      "at": "2026-11-19T21:09:39.211Z",
+      "exe": "release\\0.1.0\\win-unpacked\\openspeccontrol.exe",
+      "OriginalFilename": "",
+      "ProductName": "OpenSpecControl",
+      "InternalName": "openspeccontrol",
+      "FileDescription": "OpenSpecControl",
+      "ProductVersion": "0.1.0.0"
+    },
+    {
+      "step": "4.8 identidad en la app empaquetada",
+      "at": "2026-11-19T21:09:45.795Z",
+      "pid": 46276,
+      "visibleMs": 264,
+      "tituloVentana": "OpenSpecControl",
+      "barraDeTareas": {
+        "antes": {
+          "presente": true,
+          "ventanas": 2,
+          "boton": "Electron- 2 ventanas de ejecución"
+        },
+        "despues": {
+          "presente": true,
+          "ventanas": 3,
+          "boton": "Electron- 3 ventanas de ejecución"
+        },
+        "presente": true,
+        "decisivo": true
+      },
+      "proceso": "openspeccontrol"
+    },
+    {
+      "step": "4.1 instancia única en la app empaquetada",
+      "at": "2026-11-19T21:09:51.616Z",
+      "segundaInstanciaCodigoSalida": 0,
+      "primeraRestaurada": true,
+      "primeraEnPrimerPlano": true,
+      "nota": "el primer plano lo concede Windows (foreground lock) y depende de lo que haga la persona en ese instante: se registra, no se exige",
+      "pidsAntes": [
+        46276,
+        24300,
+        13064,
+        47976
+      ],
+      "pidsDespues": [
+        46276,
+        24300,
+        13064,
+        47976
+      ]
+    },
+    {
+      "step": "cierre de la empaquetada",
+      "at": "2026-11-19T21:09:53.538Z",
+      "procesosDeLaAppTrasCerrar": []
+    }
+  ],
+  "finishedAt": "2026-11-19T21:09:54.774Z"
+}

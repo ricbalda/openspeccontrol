@@ -1,0 +1,235 @@
+{
+  "startedAt": "2026-11-19T21:08:31.952Z",
+  "steps": [
+    {
+      "step": "cerrar-1: sesión en curso",
+      "at": "2026-11-19T21:08:34.574Z",
+      "repo": "C:\\Users\\ricba\\AppData\\Local\\Temp\\osc-fase4c-V2H68t\\repos\\hello-app",
+      "status": "busy",
+      "pendingInteractions": 1
+    },
+    {
+      "step": "cerrar-1 antes del cierre: árbol de procesos",
+      "at": "2026-11-19T21:08:35.535Z",
+      "pid": 11572,
+      "total": 5,
+      "procesos": [
+        "15884 electron.exe",
+        "47476 electron.exe",
+        "9584 electron.exe",
+        "15540 node.exe",
+        "68096 conhost.exe"
+      ]
+    },
+    {
+      "step": "4.4 db antes de cerrar",
+      "at": "2026-11-19T21:08:35.535Z",
+      "openspeccontrol.db": 4096,
+      "openspeccontrol.db-wal": 98912,
+      "openspeccontrol.db-shm": 32768
+    },
+    {
+      "step": "4.4 diálogo nativo (Cancelar)",
+      "at": "2026-11-19T21:08:39.147Z",
+      "clicked": true,
+      "title": "Cerrar OpenSpecControl",
+      "found": true,
+      "via": "focus+space",
+      "buttons": [
+        "Cancelar",
+        "Cerrar igual"
+      ],
+      "waitedMs": 91
+    },
+    {
+      "step": "4.4 tras Cancelar",
+      "at": "2026-11-19T21:08:46.542Z",
+      "appViva": true,
+      "dialogoSigueAbierto": false,
+      "tituloVentana": "OpenSpecControl",
+      "ventanaVisible": true,
+      "procesosAntes": 5,
+      "procesosDespues": 5,
+      "agenteVivo": true
+    },
+    {
+      "step": "4.4 diálogo nativo (Cerrar igual)",
+      "at": "2026-11-19T21:08:49.994Z",
+      "clicked": true,
+      "title": "Cerrar OpenSpecControl",
+      "found": true,
+      "via": "focus+space",
+      "buttons": [
+        "Cancelar",
+        "Cerrar igual"
+      ],
+      "waitedMs": 295
+    },
+    {
+      "step": "cerrar-1: proceso salió",
+      "at": "2026-11-19T21:08:50.154Z",
+      "code": 0
+    },
+    {
+      "step": "4.4 salida tras Cerrar igual",
+      "at": "2026-11-19T21:08:59.019Z",
+      "exitCode": 0,
+      "pidsEsperados": [
+        15884,
+        47476,
+        9584,
+        15540,
+        68096,
+        11572
+      ],
+      "huérfanos": [],
+      "dbDespues": {
+        "openspeccontrol.db": 45056,
+        "openspeccontrol.db-wal": null,
+        "openspeccontrol.db-shm": null
+      }
+    },
+    {
+      "step": "4.4 checkpoint del WAL",
+      "at": "2026-11-19T21:08:59.020Z",
+      "antes": "openspeccontrol.db-wal presente",
+      "despues": {
+        "openspeccontrol.db": 45056,
+        "openspeccontrol.db-wal": null,
+        "openspeccontrol.db-shm": null
+      },
+      "nota": "SQLite elimina -wal/-shm al cerrar la última conexión con checkpoint"
+    },
+    {
+      "step": "menu: sesión en curso",
+      "at": "2026-11-19T21:09:01.700Z",
+      "repo": "C:\\Users\\ricba\\AppData\\Local\\Temp\\osc-fase4c-V2H68t\\repos\\hello-app",
+      "status": "busy",
+      "pendingInteractions": 1
+    },
+    {
+      "step": "menu antes de Salir: árbol de procesos",
+      "at": "2026-11-19T21:09:02.638Z",
+      "pid": 66600,
+      "total": 5,
+      "procesos": [
+        "49732 electron.exe",
+        "24436 electron.exe",
+        "12620 electron.exe",
+        "9192 node.exe",
+        "4056 conhost.exe"
+      ]
+    },
+    {
+      "step": "4.4 Archivo → Salir (role quit = app.quit())",
+      "at": "2026-11-19T21:09:02.644Z",
+      "via": "inspector del main",
+      "quitCall": "app.quit() invocado"
+    },
+    {
+      "step": "4.4 diálogo tras Salir del menú",
+      "at": "2026-11-19T21:09:03.981Z",
+      "dialogo": {
+        "clicked": true,
+        "title": "Cerrar OpenSpecControl",
+        "found": true,
+        "via": "focus+space",
+        "buttons": [
+          "Cancelar",
+          "Cerrar igual"
+        ],
+        "waitedMs": 135
+      }
+    },
+    {
+      "step": "menu: proceso salió",
+      "at": "2026-11-19T21:09:04.073Z",
+      "code": 0
+    },
+    {
+      "step": "4.4 salida por el menú",
+      "at": "2026-11-19T21:09:11.955Z",
+      "exitCode": 0,
+      "huerfanos": [],
+      "db": {
+        "openspeccontrol.db": 45056,
+        "openspeccontrol.db-wal": null,
+        "openspeccontrol.db-shm": null
+      }
+    },
+    {
+      "step": "crash: sesión en curso",
+      "at": "2026-11-19T21:09:14.752Z",
+      "repo": "C:\\Users\\ricba\\AppData\\Local\\Temp\\osc-fase4c-V2H68t\\repos\\hello-app",
+      "status": "busy",
+      "pendingInteractions": 1
+    },
+    {
+      "step": "crash antes de la caída: árbol de procesos",
+      "at": "2026-11-19T21:09:16.223Z",
+      "pid": 2280,
+      "total": 5,
+      "procesos": [
+        "64840 electron.exe",
+        "54804 electron.exe",
+        "37772 electron.exe",
+        "40224 node.exe",
+        "28244 conhost.exe"
+      ]
+    },
+    {
+      "step": "4.7 caída del renderer",
+      "at": "2026-11-19T21:09:16.536Z",
+      "motivo": "El proceso de la interfaz terminó (crashed, código -2147483645)."
+    },
+    {
+      "step": "4.7 diálogo de recarga",
+      "at": "2026-11-19T21:09:18.284Z",
+      "clicked": true,
+      "title": "Recargar OpenSpecControl",
+      "found": true,
+      "via": "focus+space",
+      "buttons": [
+        "Recargar",
+        "Cerrar"
+      ],
+      "waitedMs": 237
+    },
+    {
+      "step": "4.7 recuperación tras recargar",
+      "at": "2026-11-19T21:09:18.707Z",
+      "replay": {
+        "n": 85,
+        "kinds": {
+          "notice": 1,
+          "user": 2,
+          "update": 80,
+          "turn_end": 1,
+          "permission": 1
+        }
+      },
+      "sessionTrasRecarga": {
+        "status": "busy",
+        "pending": 1
+      }
+    },
+    {
+      "step": "crash: proceso salió",
+      "at": "2026-11-19T21:09:21.777Z",
+      "code": 0
+    },
+    {
+      "step": "4.7 cierre final",
+      "at": "2026-11-19T21:09:29.761Z",
+      "dialogo": true,
+      "exitCode": 0,
+      "huerfanos": [],
+      "db": {
+        "openspeccontrol.db": 77824,
+        "openspeccontrol.db-wal": null,
+        "openspeccontrol.db-shm": null
+      }
+    }
+  ],
+  "finishedAt": "2026-11-19T21:09:30.999Z"
+}
