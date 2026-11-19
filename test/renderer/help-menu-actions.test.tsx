@@ -2,12 +2,13 @@
 // Cableado final del menú Ayuda en el renderer: 'demo-repo' (5.7) abre el diálogo
 // del agente y createDemo aplica el workspace y abre el cambio; 'open-data-folder'
 // (5.8) llama a window.osc.openDataFolder; 'dependency-diagnostics' (6.4) abre el
-// ToolsDialog. 'check-updates' (Fase 9) sigue sin cablear.
+// ToolsDialog. 'check-updates' (9.4) fuerza la comprobación y avisa del resultado.
 
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DemoRepoOutcome } from '@shared/ipc.ts'
+import type { UpdateState } from '@shared/protocol.ts'
 import { DemoRepoDialog } from '../../src/renderer/src/panes/DemoRepoDialog.tsx'
 import { ToolsDialog } from '../../src/renderer/src/panes/ToolsDialog.tsx'
 import { createDemo, menuAction, useStore } from '../../src/renderer/src/store.ts'
@@ -18,6 +19,7 @@ const CHANGE = 'add-hello-endpoint'
 const osc = vi.hoisted(() => ({
   createDemoRepo: vi.fn(),
   openDataFolder: vi.fn(),
+  checkForUpdates: vi.fn(),
   config: vi.fn(),
   send: vi.fn()
 }))
@@ -39,6 +41,7 @@ window.osc = {
   config: osc.config,
   createDemoRepo: osc.createDemoRepo,
   openDataFolder: osc.openDataFolder,
+  checkForUpdates: osc.checkForUpdates,
   send: osc.send,
   onMessage: () => () => {},
   changes: () =>
@@ -76,6 +79,7 @@ beforeEach(() => {
   root = null
   osc.createDemoRepo.mockReset()
   osc.openDataFolder.mockReset()
+  osc.checkForUpdates.mockReset()
   osc.config.mockReset()
   osc.send.mockReset()
   osc.config.mockResolvedValue({ platform: 'win32', defaultAgent: 'claude', agents: [], tools: [] })
@@ -188,11 +192,55 @@ describe("menuAction 'dependency-diagnostics' (tarea 6.4)", () => {
   })
 })
 
-describe("menuAction 'check-updates' (Fase 9)", () => {
-  it('sigue sin cablear: solo avisa', () => {
+describe("menuAction 'check-updates' (tarea 9.4)", () => {
+  const check = async (state: UpdateState): Promise<void> => {
+    osc.checkForUpdates.mockResolvedValue(state)
     menuAction('check-updates')
-    expect(toasts().some((t) => t.includes('check-updates'))).toBe(true)
+    await flush()
+  }
+
+  it('fuerza la comprobación en main y deja el estado en el store', async () => {
+    await check({ status: 'idle', current: '0.1.0' })
+    expect(osc.checkForUpdates).toHaveBeenCalledTimes(1)
+    expect(useStore.getState().update).toEqual({ status: 'idle', current: '0.1.0' })
     expect(osc.createDemoRepo).not.toHaveBeenCalled()
-    expect(osc.openDataFolder).not.toHaveBeenCalled()
+  })
+
+  it('sin novedades: "Ya tienes la última versión"', async () => {
+    await check({ status: 'idle', current: '0.1.0' })
+    expect(toasts()).toEqual(['Ya tienes la última versión (0.1.0).'])
+  })
+
+  it('con una versión nueva avisa de que se descarga', async () => {
+    await check({ status: 'downloading', current: '0.1.0', latest: '0.1.1', progress: 12 })
+    expect(toasts()).toEqual([
+      'Hay una versión nueva (0.1.1); se está descargando en segundo plano.'
+    ])
+  })
+
+  it('descargada: indica cómo reiniciar', async () => {
+    await check({ status: 'downloaded', current: '0.1.0', latest: '0.1.1' })
+    expect(toasts()[0]).toContain('Reiniciar para actualizar a 0.1.1')
+  })
+
+  it('desactivada: explica por qué (desarrollo o OSC_NO_UPDATE_CHECK)', async () => {
+    await check({ status: 'disabled', current: '0.1.0', reason: 'dev' })
+    expect(toasts()[0]).toContain('no en desarrollo')
+    useStore.setState({ toasts: [] })
+    await check({ status: 'disabled', current: '0.1.0', reason: 'env' })
+    expect(toasts()[0]).toContain('OSC_NO_UPDATE_CHECK=1')
+  })
+
+  it('error: lo muestra como error, sin tumbar la app', async () => {
+    await check({ status: 'error', current: '0.1.0', error: 'net::ERR_INTERNET_DISCONNECTED' })
+    expect(toasts()).toEqual(['No se pudo buscar actualizaciones: net::ERR_INTERNET_DISCONNECTED'])
+    expect(useStore.getState().toasts[0].level).toBe('error')
+  })
+
+  it('si main rechaza la llamada, avisa con su mensaje', async () => {
+    osc.checkForUpdates.mockRejectedValue(new Error('untrusted sender'))
+    menuAction('check-updates')
+    await flush()
+    expect(toasts()).toEqual(['untrusted sender'])
   })
 })

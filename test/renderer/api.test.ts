@@ -19,7 +19,7 @@ beforeEach(() => {
   for (const k of Object.keys(calls)) delete calls[k]
   const mock: Record<string, unknown> = {
     config: record('config'),
-    update: record('update'),
+    updateState: record('updateState'),
     repos: record('repos'),
     addRoot: record('addRoot'),
     removeRoot: record('removeRoot'),
@@ -37,7 +37,9 @@ beforeEach(() => {
     closeRound: record('closeRound'),
     git: record('git'),
     gitBranch: record('gitBranch'),
-    gitCommit: record('gitCommit')
+    gitCommit: record('gitCommit'),
+    checkForUpdates: record('checkForUpdates'),
+    installUpdate: record('installUpdate')
   }
   window.osc = mock as unknown as typeof window.osc
 })
@@ -66,8 +68,12 @@ describe('api delegates to window.osc', () => {
     await api.file('C:/r', 'changes/add-x/proposal.md')
     expect(calls['file']).toEqual([['C:/r', 'changes/add-x/proposal.md']])
 
-    await api.update()
-    expect(calls['update']).toEqual([[]])
+    await api.updateState()
+    await api.checkForUpdates()
+    await api.installUpdate()
+    expect(calls['updateState']).toEqual([[]])
+    expect(calls['checkForUpdates']).toEqual([[]])
+    expect(calls['installUpdate']).toEqual([[]])
   })
 
   it('passes the body objects of the review and git calls untouched', async () => {
