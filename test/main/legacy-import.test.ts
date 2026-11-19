@@ -115,4 +115,50 @@ describe('importFromStudio', () => {
     expect(copy.prepare('SELECT COUNT(*) AS n FROM comments').get()).toMatchObject({ n: 2 })
     copy.close()
   })
+
+  it('leaves no -shm/-wal side files in the origin after importing a WAL database', () => {
+    const from = mkStudio()
+    const db = new DatabaseSync(path.join(from, 'studio.db'))
+    db.exec('PRAGMA journal_mode = WAL')
+    db.exec("INSERT INTO comments VALUES ('c3', '/repos/app')")
+    db.close() // WAL mode sticks; a read-only connection would leave -shm/-wal behind
+    const before = fs.readdirSync(from).sort()
+
+    const to = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-imp-dst-'))
+    expect(importFromStudio({ from, to }).imported).toBe(true)
+
+    // the origin is exactly as we found it: the read-only import must clean up
+    // the -shm (and the 0-byte -wal) its connection created
+    expect(fs.readdirSync(from).sort()).toEqual(before)
+    expect(fs.existsSync(path.join(from, 'studio.db-shm'))).toBe(false)
+    expect(fs.existsSync(path.join(from, 'studio.db-wal'))).toBe(false)
+  })
+
+  it('keeps a -shm that was already in the origin (Studio may have the db open)', () => {
+    const from = mkStudio()
+    const db = new DatabaseSync(path.join(from, 'studio.db'))
+    db.exec('PRAGMA journal_mode = WAL')
+    db.close()
+    // Studio running: its own (empty) -shm/-wal exist before we ever look
+    fs.writeFileSync(path.join(from, 'studio.db-shm'), Buffer.alloc(0))
+    fs.writeFileSync(path.join(from, 'studio.db-wal'), Buffer.alloc(0))
+    const to = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-imp-dst-'))
+    importFromStudio({ from, to })
+    expect(fs.existsSync(path.join(from, 'studio.db-shm'))).toBe(true)
+    expect(fs.existsSync(path.join(from, 'studio.db-wal'))).toBe(true)
+  })
+
+  it('never removes a -wal that was already in the origin (it may hold commits)', () => {
+    const from = mkStudio()
+    const db = new DatabaseSync(path.join(from, 'studio.db'))
+    db.exec('PRAGMA journal_mode = WAL')
+    db.exec("INSERT INTO comments VALUES ('c3', '/repos/app')")
+    db.close()
+    // simulate Studio dying without checkpointing: a -wal with content is there
+    // before we ever look at the folder (written after close so it survives)
+    fs.writeFileSync(path.join(from, 'studio.db-wal'), Buffer.from('leftover wal, not empty'))
+    const to = fs.mkdtempSync(path.join(os.tmpdir(), 'osc-imp-dst-'))
+    importFromStudio({ from, to }) // may fail on the fake -wal; the file must survive either way
+    expect(fs.existsSync(path.join(from, 'studio.db-wal'))).toBe(true)
+  })
 })
