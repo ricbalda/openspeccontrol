@@ -28,10 +28,11 @@ OpenSpecControl helps you turn an idea into an [OpenSpec](https://github.com/Fis
 - Send all comments to the agent as a review round, get a verdict per comment, and see word-level diffs between revisions.
 - Built-in validation with `openspec validate` and warnings for stale artifacts (a file written before something it depends on changed).
 
-### 3. One rail for every change
+### 3. One rail, several repositories
 
-- Every change of the repositories you added, grouped by stage: _Drafting_, _In review_, _Ready to build_, _Building_ and _Done_, with the progress read from `tasks.md`.
-- Native notifications, a taskbar/dock badge and a "(n) Needs you" window title when the agent is waiting for a decision while the window is in the background.
+- Open several repositories at once (up to 8): each one gets its own collapsible section in the rail — name, branch, agent status and pending decisions — with its changes grouped by stage: _Drafting_, _In review_, _Ready to build_, _Building_ and _Done_, with the progress read from `tasks.md`.
+- One repository is **active** at a time in the document and agent panels; switching keeps what you had open, and opening a change from another repository's section activates it.
+- Agents keep working in background repositories: their sections stay up to date, and native notifications, a taskbar/dock badge and a "(n) Needs you" window title name the repository that needs you while the window is in the background.
 - Optional **review history in the repo**: comments and rounds are exported to `openspec/changes/<change>/.openspeccontrol-review.json`, so they travel with the branch and the pull request.
 
 ### 4. Git and spec lifecycle
@@ -192,7 +193,7 @@ TypeScript end to end: Electron 45, React 19, Vite (electron-vite), Tailwind CSS
 ## Known limitations
 
 - macOS and Linux builds, code signing, notarization and the automatic update flow have not been verified on real machines yet.
-- A single window: one repository is shown at a time, although several repositories can have an agent working at once.
+- A single window: several repositories can be open in the rail at once (up to 8), but only the active one is shown in the document and agent panels; there are no split panes or multiple windows.
 - Node.js, the OpenSpec CLI and the agent CLIs are external requirements; the app detects them and tells you how to install them, but does not bundle them.
 
 ## Roadmap

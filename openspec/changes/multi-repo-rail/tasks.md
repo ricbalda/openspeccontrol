@@ -34,10 +34,10 @@
 
 ## 5. Verificación de extremo a extremo y documentación
 
-- [ ] 5.1 E2E con `agent-browser` por CDP (puerto propio) y dos repos de demostración: abrir ambos, ver las dos secciones, cambiar de repo conservando el cambio abierto, plegar, cerrar uno con y sin agente — verificación: informe de pasos OK/FALLA en `test/` y capturas fuera del repo versionado
-- [ ] 5.2 Con un agente en un repo en segundo plano, comprobar la marca de decisión pendiente en su sección y la notificación con su nombre — verificación: paso del E2E (la notificación del sistema se documenta como verificada o no verificada)
-- [ ] 5.3 Actualizar `docsplan/GUI_Spec.md` (secciones por repo, `RepoSection`, `RepoPicker` que abre) y `README.md`/`CLAUDE.md` si describen un solo repo — verificación: revisión del diff
-- [ ] 5.4 Criterio de aceptación del cambio: `npm run typecheck`, `npm run lint` (0 avisos), `npm test` y `npx electron-vite build` pasan, y el E2E 5.1 termina sin fallos
+- [x] 5.1 E2E con `agent-browser` por CDP (puerto propio) y dos repos de demostración: abrir ambos, ver las dos secciones, cambiar de repo conservando el cambio abierto, plegar, cerrar uno con y sin agente — verificación: informe de pasos OK/FALLA en `test/` y capturas fuera del repo versionado
+- [x] 5.2 Con un agente en un repo en segundo plano, comprobar la marca de decisión pendiente en su sección y la notificación con su nombre — verificación: paso del E2E (la notificación del sistema se documenta como verificada o no verificada)
+- [x] 5.3 Actualizar `docsplan/GUI_Spec.md` (secciones por repo, `RepoSection`, `RepoPicker` que abre) y `README.md`/`CLAUDE.md` si describen un solo repo — verificación: revisión del diff
+- [x] 5.4 Criterio de aceptación del cambio: `npm run typecheck`, `npm run lint` (0 avisos), `npm test` y `npx electron-vite build` pasan, y el E2E 5.1 termina sin fallos
 
 ## Workflow follow-up
 
