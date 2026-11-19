@@ -2,9 +2,9 @@
 // one-and-only surface the renderer may call. It replaces Studio's REST routes
 // and WebSocket (plan, tabla 4.2). Dependency-free: the preload bundles it, the
 // renderer imports its types and the main process registers one handler per
-// method. `pickFolder()` (dialog) and `updateState()` + `update_state` arrive
-// with Fases 5 and 9; `browse` is gone for good (Fase 5 brings the native
-// folder picker instead).
+// method. `pickFolder()`, `notify()`, `openExternal()` and friends arrived with
+// Fase 5 (native integrations); `updateState()` + `update_state` arrive with
+// Fase 9; `browse` is gone for good (Fase 5 brought the native folder picker).
 
 import type {
   AgentInfo,
@@ -96,6 +96,17 @@ export interface CommentCreateBody {
 /** `PATCH /api/comments/:id` */
 export type CommentPatchBody = Partial<Pick<ReviewComment, 'body' | 'kind' | 'status'>>
 
+/** `notify({ title, body, kind })`: an OS notification (Fase 5). */
+export interface NotifyInput {
+  title: string
+  body?: string
+  /** `attention` also flashes the taskbar entry until the window is focused. */
+  kind?: 'info' | 'attention'
+}
+
+/** What `nativeTheme.themeSource` accepts (Fase 5). */
+export type NativeThemeSetting = 'light' | 'dark' | 'system'
+
 /**
  * What `window.osc` exposes: one explicit function per operation plus the
  * realtime pair. The preload implements exactly this; the renderer declares it
@@ -136,6 +147,24 @@ export interface OscApi {
   git(repo: string, scope?: GitScope): Promise<GitInfo>
   gitBranch(repo: string, change: string): Promise<GitInfo>
   gitCommit(b: GitCommitBody): Promise<{ commit: string; files: number }>
+  // ---- Fase 5: native integrations ------------------------------------------------
+  /**
+   * Native folder picker (`dialog.showOpenDialog`): adds the chosen folder as a
+   * workspace root and answers the refreshed Workspace, or null when the user
+   * cancelled. Validation failures (folder gone, whole drive) reject like any
+   * other method, so the renderer toasts the core's own message.
+   */
+  pickFolder(): Promise<Workspace | null>
+  /** OS notification, shown by the main only while the window is unfocused. */
+  notify(n: NotifyInput): Promise<{ ok: true }>
+  /** Open a link in the system browser; only http:, https: and mailto: pass. */
+  openExternal(url: string): Promise<{ opened: boolean }>
+  /** Mirror the renderer's theme choice on the window title bar and menus. */
+  setNativeTheme(t: NativeThemeSetting): Promise<{ ok: true }>
+  /** Help → data folder: open `~/.openspeccontrol` in the OS file manager. */
+  openDataFolder(): Promise<{ ok: true }>
+  /** Repo header → reveal an added repo in the OS file manager. */
+  showInExplorer(repo: string): Promise<{ ok: true }>
   /** Realtime in: one ClientMsg to the core (channel `osc:client-msg`). */
   send(msg: ClientMsg): void
   /** Realtime out: core events (channel `osc:server-msg`); returns the unsubscribe. */
