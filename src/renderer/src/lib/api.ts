@@ -8,7 +8,7 @@ import type { CommentCreateBody, CommentPatchBody, GitCommitBody } from '@shared
 
 export const api = {
   config: () => window.osc.config(),
-  update: () => window.osc.update(),
+  updateState: () => window.osc.updateState(),
   git: (repo: string, scope: { change?: string; archived?: string } = {}) =>
     window.osc.git(repo, scope),
   gitBranch: (repo: string, change: string) => window.osc.gitBranch(repo, change),
@@ -36,5 +36,8 @@ export const api = {
   setNativeTheme: (t: 'light' | 'dark' | 'system') => window.osc.setNativeTheme(t),
   openDataFolder: () => window.osc.openDataFolder(),
   showInExplorer: (repo: string) => window.osc.showInExplorer(repo),
-  createDemoRepo: (agent: string | null) => window.osc.createDemoRepo(agent)
+  createDemoRepo: (agent: string | null) => window.osc.createDemoRepo(agent),
+  // Fase 9: actualización automática
+  checkForUpdates: () => window.osc.checkForUpdates(),
+  installUpdate: () => window.osc.installUpdate()
 }

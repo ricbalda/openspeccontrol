@@ -23,7 +23,7 @@ const call = async <T>(method: string, ...args: unknown[]): Promise<T> => {
 
 const osc: OscApi = {
   config: () => call('config'),
-  update: () => call('update'),
+  updateState: () => call('updateState'),
   repos: (refresh) => call('repos', refresh),
   addRoot: (path) => call('addRoot', path),
   removeRoot: (path) => call('removeRoot', path),
@@ -50,6 +50,9 @@ const osc: OscApi = {
   openDataFolder: () => call('openDataFolder'),
   showInExplorer: (repo) => call('showInExplorer', repo),
   createDemoRepo: (agent) => call('createDemoRepo', agent),
+  // Fase 9: actualización automática
+  checkForUpdates: () => call('checkForUpdates'),
+  installUpdate: () => call('installUpdate'),
   send: (msg) => {
     ipcRenderer.send(CLIENT_MSG_CHANNEL, msg)
   },

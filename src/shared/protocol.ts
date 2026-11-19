@@ -152,16 +152,23 @@ export interface GitPendingFile {
   status: 'added' | 'modified' | 'deleted' | 'renamed'
 }
 
-/** The app's version against the newest one published (GET /api/update). */
-export interface UpdateInfo {
+/**
+ * Estado de la actualización automática (Fase 9, electron-updater sobre GitHub
+ * Releases). Lo posee el proceso principal y llega al renderer por
+ * `updateState()` y por el ServerMsg `update_state`.
+ */
+export interface UpdateState {
+  status: 'disabled' | 'idle' | 'checking' | 'available' | 'downloading' | 'downloaded' | 'error'
+  /** versión instalada */
   current: string
-  /** null: not checked (disabled) or the registry could not be reached */
-  latest: string | null
-  newer: boolean
-  /** how this copy was installed, which decides the update command */
-  install: 'npm' | 'clone'
-  command: string
-  disabled: boolean
+  /** versión nueva (available, downloading y downloaded) */
+  latest?: string
+  /** descarga completada, 0-100 (downloading) */
+  progress?: number
+  /** mensaje del fallo (error) */
+  error?: string
+  /** por qué está desactivada (disabled): sin empaquetar o OSC_NO_UPDATE_CHECK=1 */
+  reason?: 'dev' | 'env'
 }
 
 export type ChangeStage = 'draft' | 'review' | 'ready' | 'applying' | 'done'
@@ -270,6 +277,7 @@ export type ServerMsg =
   | { type: 'review_changed'; repo: string; change: string }
   | { type: 'error'; message: string }
   | { type: 'menu'; action: MenuAction }
+  | { type: 'update_state'; state: UpdateState }
 
 export type ClientMsg =
   | { type: 'subscribe'; repo: string }

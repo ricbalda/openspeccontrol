@@ -3,8 +3,9 @@
 // and WebSocket (plan, tabla 4.2). Dependency-free: the preload bundles it, the
 // renderer imports its types and the main process registers one handler per
 // method. `pickFolder()`, `notify()`, `openExternal()` and friends arrived with
-// Fase 5 (native integrations); `updateState()` + `update_state` arrive with
-// Fase 9; `browse` is gone for good (Fase 5 brought the native folder picker).
+// Fase 5 (native integrations); `updateState()`, `checkForUpdates()`, `installUpdate()` and
+// the `update_state` event arrived with Fase 9; `browse` is gone for good (Fase 5
+// brought the native folder picker).
 
 import type {
   AgentInfo,
@@ -20,7 +21,7 @@ import type {
   ReviewRound,
   ServerMsg,
   SpecSummary,
-  UpdateInfo,
+  UpdateState,
   Workspace
 } from './protocol.ts'
 
@@ -146,10 +147,10 @@ export interface DemoRepoOutcome {
 export interface OscApi {
   config(): Promise<OscConfig>
   /**
-   * npm-registry check copied from Studio; Fase 9 replaces it with
-   * `updateState()` + the `update_state` event (electron-updater).
+   * Estado actual de la actualización automática (Fase 9, electron-updater);
+   * sus cambios llegan después como el ServerMsg `update_state`.
    */
-  update(): Promise<UpdateInfo>
+  updateState(): Promise<UpdateState>
   repos(refresh?: boolean): Promise<Workspace>
   addRoot(path: string): Promise<Workspace>
   removeRoot(path: string): Promise<Workspace>
@@ -200,6 +201,18 @@ export interface OscApi {
    * skips it) and adds it to the workspace. null when the picker was cancelled.
    */
   createDemoRepo(agent: string | null): Promise<DemoRepoOutcome | null>
+  // ---- Fase 9: actualización automática -----------------------------------------
+  /**
+   * Ayuda → Buscar actualizaciones: fuerza la comprobación y responde el estado
+   * resultante (`idle` = ya tienes la última versión). Si ya hay una en curso, la espera.
+   */
+  checkForUpdates(): Promise<UpdateState>
+  /**
+   * "Reiniciar para actualizar": con la actualización descargada y trabajo en curso
+   * (agente `busy` o decisiones pendientes) pide la confirmación de cierre seguro y,
+   * si se acepta, cierra e instala. `installing: false` = el usuario canceló.
+   */
+  installUpdate(): Promise<{ installing: boolean }>
   /** Realtime in: one ClientMsg to the core (channel `osc:client-msg`). */
   send(msg: ClientMsg): void
   /** Realtime out: core events (channel `osc:server-msg`); returns the unsubscribe. */
