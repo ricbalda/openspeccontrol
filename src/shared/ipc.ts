@@ -122,6 +122,20 @@ export interface NotifyInput {
 /** What `nativeTheme.themeSource` accepts (Fase 5). */
 export type NativeThemeSetting = 'light' | 'dark' | 'system'
 
+/** `createDemoRepo()`: the demo repo that Ayuda → Crear repositorio de demostración makes. */
+export interface DemoRepoOutcome {
+  /** The refreshed workspace, already containing the demo repo. */
+  workspace: Workspace
+  /** Id of the demo repo (its real absolute path): what the UI selects. */
+  repo: string
+  /** The active change waiting in "In review" (`add-hello-endpoint`). */
+  change: string
+  openspecOk: boolean
+  gitOk: boolean
+  /** What degraded (no openspec CLI, no git), for toasts. */
+  warnings: string[]
+}
+
 /**
  * What `window.osc` exposes: one explicit function per operation plus the
  * realtime pair. The preload implements exactly this; the renderer declares it
@@ -180,6 +194,12 @@ export interface OscApi {
   openDataFolder(): Promise<{ ok: true }>
   /** Repo header → reveal an added repo in the OS file manager. */
   showInExplorer(repo: string): Promise<{ ok: true }>
+  /**
+   * Help → demo repository: the main shows the native folder picker, creates
+   * `<folder>/hello-app` (async; `agent` decides the `openspec init --tools`, null
+   * skips it) and adds it to the workspace. null when the picker was cancelled.
+   */
+  createDemoRepo(agent: string | null): Promise<DemoRepoOutcome | null>
   /** Realtime in: one ClientMsg to the core (channel `osc:client-msg`). */
   send(msg: ClientMsg): void
   /** Realtime out: core events (channel `osc:server-msg`); returns the unsubscribe. */

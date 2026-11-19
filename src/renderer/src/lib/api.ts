@@ -35,5 +35,6 @@ export const api = {
   openExternal: (url: string) => window.osc.openExternal(url),
   setNativeTheme: (t: 'light' | 'dark' | 'system') => window.osc.setNativeTheme(t),
   openDataFolder: () => window.osc.openDataFolder(),
-  showInExplorer: (repo: string) => window.osc.showInExplorer(repo)
+  showInExplorer: (repo: string) => window.osc.showInExplorer(repo),
+  createDemoRepo: (agent: string | null) => window.osc.createDemoRepo(agent)
 }

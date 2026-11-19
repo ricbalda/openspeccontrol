@@ -49,6 +49,7 @@ const osc: OscApi = {
   setNativeTheme: (t) => call('setNativeTheme', t),
   openDataFolder: () => call('openDataFolder'),
   showInExplorer: (repo) => call('showInExplorer', repo),
+  createDemoRepo: (agent) => call('createDemoRepo', agent),
   send: (msg) => {
     ipcRenderer.send(CLIENT_MSG_CHANNEL, msg)
   },
