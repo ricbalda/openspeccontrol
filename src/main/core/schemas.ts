@@ -61,6 +61,7 @@ export const commentPatch = z.object({
 
 export const clientMsg = z.discriminatedUnion('type', [
   z.object({ type: z.literal('subscribe'), repo }),
+  z.object({ type: z.literal('unsubscribe'), repo }),
   z.object({ type: z.literal('start'), repo, agent: z.string(), resume: z.boolean().optional() }),
   z.object({ type: z.literal('stop'), repo }),
   z.object({ type: z.literal('prompt'), repo, text: capped(20000) }),
