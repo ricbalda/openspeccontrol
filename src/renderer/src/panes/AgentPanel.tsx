@@ -125,8 +125,8 @@ export function AgentPanel() {
       : doneUnseen
         ? '✓ Agent finished · OpenSpecControl'
         : 'OpenSpecControl'
-    if (pending.length && 'Notification' in window && Notification.permission === 'default')
-      Notification.requestPermission().catch(() => {})
+    // the OS notification itself is the main process's job now (Fase 5.3):
+    // no permission prompt, no browser Notification API in the renderer
   }, [pending.length, doneUnseen])
 
   const status = session ? STATUS[session.status] : null
