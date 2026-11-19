@@ -38,6 +38,13 @@ beforeEach(() => {
     git: record('git'),
     gitBranch: record('gitBranch'),
     gitCommit: record('gitCommit'),
+    drafts: record('drafts'),
+    draft: record('draft'),
+    createDraft: record('createDraft'),
+    saveDraft: record('saveDraft'),
+    duplicateDraft: record('duplicateDraft'),
+    deleteDraft: record('deleteDraft'),
+    sendDraft: record('sendDraft'),
     checkForUpdates: record('checkForUpdates'),
     installUpdate: record('installUpdate')
   }
@@ -102,5 +109,49 @@ describe('api delegates to window.osc', () => {
       config: () => Promise.reject(new Error('invalid request: repo: Required'))
     }
     await expect(api.config()).rejects.toThrow('invalid request: repo: Required')
+  })
+})
+
+describe('api delegates the draft methods to window.osc (add-proposal-drafts, tarea 2.3)', () => {
+  it('passes every argument through, position by position', async () => {
+    await api.drafts('C:/r', 'export')
+    await api.drafts('C:/r')
+    expect(calls['drafts']).toEqual([
+      ['C:/r', 'export'],
+      ['C:/r', undefined]
+    ])
+
+    await api.draft('d1')
+    expect(calls['draft']).toEqual([['d1']])
+
+    await api.createDraft('C:/r')
+    expect(calls['createDraft']).toEqual([['C:/r']])
+
+    const patch = { title: 'Exportación CSV', body: 'Añadir exportación a CSV' }
+    await api.saveDraft('d1', patch)
+    expect(calls['saveDraft']).toEqual([['d1', patch]])
+
+    await api.duplicateDraft('d1')
+    expect(calls['duplicateDraft']).toEqual([['d1']])
+
+    await api.deleteDraft('d1')
+    expect(calls['deleteDraft']).toEqual([['d1']])
+
+    await api.sendDraft('d1', 'propose')
+    await api.sendDraft('d2', 'explore')
+    expect(calls['sendDraft']).toEqual([
+      ['d1', 'propose'],
+      ['d2', 'explore']
+    ])
+  })
+
+  it('surfaces a draft bridge failure as a rejected promise with its message', async () => {
+    window.osc = {
+      ...window.osc,
+      saveDraft: () => Promise.reject(new Error('text is too long: title: Too big'))
+    }
+    await expect(api.saveDraft('d1', { title: 'x'.repeat(201) })).rejects.toThrow(
+      'text is too long'
+    )
   })
 })
