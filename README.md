@@ -85,6 +85,50 @@ TypeScript end to end: Electron, React 19, Vite, Tailwind CSS, Node.js (Hono, We
 3. Wrap in Electron (native dialogs, app data folder).
 4. Packaging, bundled agent adapters, auto-update.
 
+## Development
+
+### Crear un release
+
+Los releases los construye y publica en **borrador** el workflow `.github/workflows/release.yml` cuando se empuja una etiqueta `v*`. La integración continua (`.github/workflows/ci.yml`) debe estar en verde antes.
+
+**1. Configura los secretos una sola vez** (GitHub → _Settings_ → _Secrets and variables_ → _Actions_ → _New repository secret_). Solo se necesitan los **nombres** de la tabla; los valores nunca van al repositorio (detalle de cada credencial en `build/SIGNING.md`). Si falta alguno, el workflow falla en su primer trabajo, antes de construir nada, y no se genera ningún artefacto sin firmar.
+
+| Plataforma | Secretos                                                                                                              | Qué contienen                                                                 |
+| ---------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Windows    | `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`                                                                                | Certificado de firma `.pfx` en base64 y su contraseña                         |
+| Windows    | `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_SIGN_ENDPOINT`, `AZURE_SIGN_ACCOUNT`, `AZURE_SIGN_PROFILE`, `AZURE_SIGN_PUBLISHER` | Alternativa al certificado: Azure Trusted Signing (basta **una** de las dos vías) |
+| macOS      | `CSC_LINK`, `CSC_KEY_PASSWORD`                                                                                        | Certificado _Developer ID Application_ `.p12` en base64 y su contraseña       |
+| macOS      | `APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`                                                               | Notarización con clave de API de App Store Connect (`APPLE_API_KEY` es el contenido del `.p8`) |
+| macOS      | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`                                                            | Alternativa de notarización con Apple ID (basta **una** de las dos vías)      |
+
+Linux no se firma. El release usa el `GITHUB_TOKEN` del propio workflow, no hace falta otro secreto.
+
+**2. Sube la versión y etiqueta.** La etiqueta debe ser exactamente `v` + la versión de `package.json`, o el workflow falla:
+
+```bash
+npm version 0.2.0 --no-git-tag-version   # actualiza package.json y package-lock.json
+git commit -am "chore: versión 0.2.0"    # PR o push a main; espera a que CI quede en verde
+git tag v0.2.0
+git push origin v0.2.0                    # dispara el workflow Release
+```
+
+Una versión con guion (`0.2.0-beta.1`) se publica como pre-release.
+
+**3. Espera al workflow `Release`** (pestaña _Actions_). Verifica etiqueta, secretos y tests; construye Windows, macOS y Linux en runners nativos con `npm run dist:win`, `npm run dist:mac` y `npm run dist:linux`; y crea el release **en borrador**.
+
+**4. Revisa el borrador** (_Releases_ → _Draft_). Debe contener, por plataforma:
+
+- Windows: un instalador por arquitectura, `OpenSpecControl-<version>-<arch>-setup.exe` (`x64` y `arm64`), y `latest.yml`.
+- macOS: `OpenSpecControl-<version>.dmg`, el `.zip` universal y `latest-mac.yml`.
+- Linux: `.AppImage` y `.deb` para `x64` y `arm64`, y `latest-linux.yml` (y el equivalente de `arm64`).
+- Los `.blockmap` (descarga diferencial).
+
+**5. Publícalo** con _Publish release_. Hasta ese momento la actualización automática (`electron-updater`) no lo ve: los `latest*.yml` son lo que lee la app instalada. Si el borrador está mal, bórralo en GitHub y vuelve a empujar la etiqueta (`git push --delete origin v0.2.0`, corrige y repite).
+
+Para probar el empaquetado en local, sin CI ni credenciales (los builds quedan **sin firmar**): `npm run dist:dir` (carpeta sin instalador), `npm run dist:win`, `npm run dist:mac` (solo en macOS) o `npm run dist:linux`; salen en `release/<version>/`.
+
+> **Estado de verificación.** Los dos workflows están implementados y su sintaxis se valida en `npm test`, pero **no se han ejecutado en GitHub**: la matriz de CI en verde y un tag de prueba que genere el borrador con los tres instaladores están pendientes. La firma real y la notarización tampoco se han podido verificar (requieren credenciales y macOS).
+
 ## Security
 
 OpenSpecControl is a local desktop app with no network surface:
