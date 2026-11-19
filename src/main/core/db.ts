@@ -42,6 +42,39 @@ export function openDb(
     CREATE TABLE IF NOT EXISTS cli_views (
       repo TEXT PRIMARY KEY, sig TEXT NOT NULL, json TEXT NOT NULL, updated_at TEXT NOT NULL
     );
+    -- borradores de proposal (add-proposal-drafts, D-1): texto en columnas
+    -- reales para ordenar por updated_at, filtrar por repo y unir con el índice
+    CREATE TABLE IF NOT EXISTS drafts (
+      id TEXT PRIMARY KEY,
+      repo TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'draft',   -- 'draft' | 'sent'
+      sent_mode TEXT,                         -- 'explore' | 'propose' (solo si sent)
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      sent_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS drafts_by_repo ON drafts (repo, updated_at);
+    -- índice de texto completo con contenido externo: el texto vive una sola
+    -- vez en drafts y trigram encuentra subcadenas («export» en «Exportación»)
+    -- sin distinguir acentos (remove_diacritics 1)
+    CREATE VIRTUAL TABLE IF NOT EXISTS drafts_fts USING fts5(
+      title, body, content='drafts', content_rowid='rowid',
+      tokenize='trigram remove_diacritics 1'
+    );
+    CREATE TRIGGER IF NOT EXISTS drafts_ai AFTER INSERT ON drafts BEGIN
+      INSERT INTO drafts_fts(rowid, title, body) VALUES (new.rowid, new.title, new.body);
+    END;
+    CREATE TRIGGER IF NOT EXISTS drafts_ad AFTER DELETE ON drafts BEGIN
+      INSERT INTO drafts_fts(drafts_fts, rowid, title, body)
+        VALUES ('delete', old.rowid, old.title, old.body);
+    END;
+    CREATE TRIGGER IF NOT EXISTS drafts_au AFTER UPDATE OF title, body ON drafts BEGIN
+      INSERT INTO drafts_fts(drafts_fts, rowid, title, body)
+        VALUES ('delete', old.rowid, old.title, old.body);
+      INSERT INTO drafts_fts(rowid, title, body) VALUES (new.rowid, new.title, new.body);
+    END;
   `)
   return _db
 }
