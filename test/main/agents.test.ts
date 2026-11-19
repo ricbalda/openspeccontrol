@@ -9,6 +9,10 @@ const { agents, getAgent } = await import('../../src/main/core/agents.ts')
 const file = path.join(DATA, 'agents.json')
 
 describe('built-in agents', () => {
+  it('are presented as opencode, Claude Code, Codex, CodeBuddy', () => {
+    expect(agents().map((a) => a.id)).toEqual(['opencode', 'claude', 'codex', 'codebuddy'])
+  })
+
   it('opencode runs `opencode acp` and uses its dashed command names', () => {
     const oc = getAgent('opencode')!
     expect(oc).toMatchObject({ cmd: 'opencode', args: ['acp'], openspecTool: 'opencode' })

@@ -28,14 +28,17 @@ const skill = (a: LifecycleAction, args: string) => `$${SKILL[a]} ${args}`.trim(
 // opencode: `opencode acp` lists its OpenSpec commands as opsx-<action> (verified against openspec 1.18)
 const dashed = (a: LifecycleAction, args: string) => `/opsx-${a} ${args}`.trim()
 
+// The array order is the presentation order in the agent panel and in DocReview:
+// opencode, Claude Code, Codex, CodeBuddy (agents.json extras follow).
 const BUILTIN: AgentDef[] = [
+  // its model (e.g. opencode/big-pickle) is chosen in the agent panel; it arrives as a config option
   {
-    id: 'codebuddy',
-    label: 'CodeBuddy',
-    openspecTool: 'codebuddy',
-    cmd: 'codebuddy',
-    args: ['--acp'],
-    command: slash
+    id: 'opencode',
+    label: 'opencode',
+    openspecTool: 'opencode',
+    cmd: 'opencode',
+    args: ['acp'],
+    command: dashed
   },
   {
     id: 'claude',
@@ -53,14 +56,13 @@ const BUILTIN: AgentDef[] = [
     args: ['-y', '@agentclientprotocol/codex-acp@2.5.0'],
     command: skill
   },
-  // its model (e.g. opencode/big-pickle) is chosen in the agent panel; it arrives as a config option
   {
-    id: 'opencode',
-    label: 'opencode',
-    openspecTool: 'opencode',
-    cmd: 'opencode',
-    args: ['acp'],
-    command: dashed
+    id: 'codebuddy',
+    label: 'CodeBuddy',
+    openspecTool: 'codebuddy',
+    cmd: 'codebuddy',
+    args: ['--acp'],
+    command: slash
   }
 ]
 
