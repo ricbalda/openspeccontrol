@@ -6,7 +6,7 @@ OpenSpecControl helps you turn an idea into an [OpenSpec](https://github.com/Fis
 
 > **Status: early development (0.1.0).** The app is functional on Windows; the macOS and Linux builds, code signing and the first published release are still pending verification. Handing changes off to [Orca](https://www.onorca.dev/) and a board that monitors many changes at once are **not** implemented yet: see the [Roadmap](#roadmap).
 
-![The change rail, the notes on a change and Send review](Docs/img/review.png)
+![The change rail, the notes on a change and Send review](docs/img/review.png)
 
 ---
 
@@ -20,7 +20,7 @@ OpenSpecControl helps you turn an idea into an [OpenSpec](https://github.com/Fis
 - Live agent panel: messages, tool calls, plans, token/context usage, and permission or question prompts that you answer from the UI.
 - Choose the agent and model per session; resume previous sessions.
 
-![Choosing the agent for a repo in the agent panel](Docs/img/agent-panel.png)
+![Choosing the agent for a repo in the agent panel](docs/img/agent-panel.png)
 
 ### 2. Document-style review
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Estado del proyecto
 
-**OpenSpecControl** es una app de escritorio **Electron 45 + React 19 + TypeScript** (electron-vite 6, un solo `package.json`) para revisar cambios de OpenSpec como un documento y dejar que un agente de código los implemente. Es la migración de OpenSpec Studio 0.3.x a escritorio: el servidor HTTP/WebSocket de Studio ya no existe; el renderer habla con el núcleo solo por IPC (`window.osc`) y la app no abre ningún puerto. El plan está en `Docs/plan-migracion-electron.md` (carpeta ignorada por git) y el cambio OpenSpec activo en `openspec/changes/migrate-to-electron-desktop/` (`tasks.md` lo marca el orquestador; no lo edites a mano salvo que la tarea lo pida).
+**OpenSpecControl** es una app de escritorio **Electron 45 + React 19 + TypeScript** (electron-vite 6, un solo `package.json`) para revisar cambios de OpenSpec como un documento y dejar que un agente de código los implemente. Es la migración de OpenSpec Studio 0.3.x a escritorio: el servidor HTTP/WebSocket de Studio ya no existe; el renderer habla con el núcleo solo por IPC (`window.osc`) y la app no abre ningún puerto. El plan está en `docsplan/plan-migracion-electron.md` (`docsplan/` es la carpeta ignorada por git con los documentos de planificación; `docs/` es la documentación versionada del proyecto) y el cambio OpenSpec activo en `openspec/changes/migrate-to-electron-desktop/` (`tasks.md` lo marca el orquestador; no lo edites a mano salvo que la tarea lo pida).
 
 ## Comandos
 
@@ -76,7 +76,7 @@ TypeScript usa project references: `tsconfig.node.json` (main, preload, shared, 
 
 ## Estilo
 
-Prettier: comillas simples, sin punto y coma, `printWidth` 100, sin trailing commas. ESLint flat config con `@electron-toolkit/eslint-config-ts`, React, react-hooks y react-refresh. Los componentes declaran retorno explícito (`React.JSX.Element`). `README.md`, `CLAUDE.md`, `openspec/` y `Docs/` están en `.prettierignore` (documentos de autor): no los reformatees en bloque. Los comentarios y mensajes de commit están en español (`feat:`, `test:`, `docs:`...).
+Prettier: comillas simples, sin punto y coma, `printWidth` 100, sin trailing commas. ESLint flat config con `@electron-toolkit/eslint-config-ts`, React, react-hooks y react-refresh. Los componentes declaran retorno explícito (`React.JSX.Element`). `README.md`, `CLAUDE.md`, `openspec/` y `docsplan/` están en `.prettierignore` (documentos de autor): no los reformatees en bloque. Los comentarios y mensajes de commit están en español (`feat:`, `test:`, `docs:`...).
 
 ## Particularidades de npm / empaquetado
 

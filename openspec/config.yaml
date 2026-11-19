@@ -3,7 +3,7 @@ schema: spec-driven
 context: |
   OpenSpecControl migra OpenSpec Studio 0.3.1 a una app de escritorio Electron 45 + electron-vite 6
   + React 19. El código de Studio está en ../../openspec-studio y solo se usa para leer.
-  El plan de referencia es Docs/plan-migracion-electron.md: sus decisiones D1–D11 ya están tomadas.
+  El plan de referencia es docsplan/plan-migracion-electron.md: sus decisiones D1–D11 ya están tomadas.
   Identidad: nombre visible "OpenSpecControl", paquete y ejecutable "openspeccontrol", versión 0.1.0,
   appId io.github.ricbalda.openspeccontrol, releases en GitHub ricbalda/openspeccontrol.
   Prefijo de identificadores: "osc" (window.osc, canales IPC osc:*, OscCore, OscError, OscApi,

@@ -55,7 +55,7 @@ el sistema SHALL incluir solo el código compilado y lo imprescindible para ejec
 #### Scenario: Revisión del paquete
 - **GIVEN** un paquete construido con `dist:dir`
 - **WHEN** se inspecciona su contenido
-- **THEN** no contiene `src/`, `test/`, `Docs/`, `openspec/` ni dependencias de desarrollo
+- **THEN** no contiene `src/`, `test/`, `docs/`, `docsplan/`, `openspec/` ni dependencias de desarrollo
 
 #### Scenario: Ejecutable usado como Node.js
 - **GIVEN** la aplicación instalada

@@ -2,7 +2,7 @@
 
 ## Why
 
-OpenSpec Studio 0.3.1 es una app web local: un servidor Node (Hono + `ws`) en `127.0.0.1:3940` sin autenticación, que obliga a defensas propias contra DNS rebinding, un explorador de carpetas propio, notificaciones atadas a permisos del navegador y actualizaciones copiando un comando `npm install -g`. OpenSpecControl lleva **toda** esa funcionalidad a una aplicación de escritorio Electron con identidad propia, sin puerto abierto, con diálogos y notificaciones nativas, instaladores firmados para Windows, macOS y Linux y actualización automática. Las decisiones de diseño D1–D11 ya están tomadas en `Docs/plan-migracion-electron.md` (sección 2) y no se reabren aquí.
+OpenSpec Studio 0.3.1 es una app web local: un servidor Node (Hono + `ws`) en `127.0.0.1:3940` sin autenticación, que obliga a defensas propias contra DNS rebinding, un explorador de carpetas propio, notificaciones atadas a permisos del navegador y actualizaciones copiando un comando `npm install -g`. OpenSpecControl lleva **toda** esa funcionalidad a una aplicación de escritorio Electron con identidad propia, sin puerto abierto, con diálogos y notificaciones nativas, instaladores firmados para Windows, macOS y Linux y actualización automática. Las decisiones de diseño D1–D11 ya están tomadas en `docsplan/plan-migracion-electron.md` (sección 2) y no se reabren aquí.
 
 ## What Changes
 
