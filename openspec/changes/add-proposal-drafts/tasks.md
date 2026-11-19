@@ -38,9 +38,9 @@
 
 ## 6. Verificación en la app real
 
-- [ ] 6.1 Escribir `test/e2e/drafts.mjs` (CDP con `agent-browser`, agente ACP falso, `OSC_DATA` y `--user-data-dir` temporales) que recorra crear, escribir, autoguardar, buscar sin acentos, superar 4000 (envío bloqueado), recortar, **Propose** (el agente falso recibe el comando), ver el enviado en solo lectura, duplicar, borrar y reiniciar la app con los borradores conservados — verificación: el script termina con todos los pasos OK y deja capturas en `test/e2e/captures/`
-- [ ] 6.2 Comprobar que el repositorio del usuario queda intacto tras el recorrido — verificación: `git status --porcelain` del repo de prueba vacío antes y después de crear y editar borradores
-- [ ] 6.3 Criterio de aceptación del cambio: el recorrido E2E pasa en Windows, `npm run build` termina sin errores y `openspec validate add-proposal-drafts --strict` sigue pasando — verificación: salidas de los tres comandos
+- [x] 6.1 Escribir `test/e2e/drafts.mjs` (CDP con `agent-browser`, agente ACP falso, `OSC_DATA` y `--user-data-dir` temporales) que recorra crear, escribir, autoguardar, buscar sin acentos, superar 4000 (envío bloqueado), recortar, **Propose** (el agente falso recibe el comando), ver el enviado en solo lectura, duplicar, borrar y reiniciar la app con los borradores conservados — verificación: el script termina con todos los pasos OK y deja capturas en `test/e2e/captures/`
+- [x] 6.2 Comprobar que el repositorio del usuario queda intacto tras el recorrido — verificación: `git status --porcelain` del repo de prueba vacío antes y después de crear y editar borradores
+- [x] 6.3 Criterio de aceptación del cambio: el recorrido E2E pasa en Windows, `npm run build` termina sin errores y `openspec validate add-proposal-drafts --strict` sigue pasando — verificación: salidas de los tres comandos
 
 ## Workflow follow-up
 
