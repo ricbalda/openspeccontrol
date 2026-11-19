@@ -16,7 +16,7 @@ import {
 const root = path.resolve(__dirname, '../..')
 const require = createRequire(import.meta.url)
 // js-yaml llega como dependencia de electron-builder (no es dependencia directa)
-const yaml = require('js-yaml') as { load: (text: string) => Record<string, any> } // eslint-disable-line @typescript-eslint/no-explicit-any
+const yaml = require('js-yaml') as { load: (text: string) => Record<string, any> }
 const read = (rel: string): string => fs.readFileSync(path.join(root, rel), 'utf8')
 const cfg = yaml.load(read('electron-builder.yml'))
 const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> }

@@ -52,8 +52,7 @@ export interface SessionRef {
   ): void
   setPermissionCheckHandler(
     handler:
-      | ((webContents: unknown, permission: string, requestingOrigin: string) => boolean)
-      | null
+      ((webContents: unknown, permission: string, requestingOrigin: string) => boolean) | null
   ): void
 }
 
@@ -79,7 +78,10 @@ export interface WindowContentsRef {
     event: 'will-attach-webview',
     listener: (event: { preventDefault(): void }, webPreferences: unknown, params: unknown) => void
   ): void
-  on(event: 'will-navigate', listener: (event: { preventDefault(): void }, url: string) => void): void
+  on(
+    event: 'will-navigate',
+    listener: (event: { preventDefault(): void }, url: string) => void
+  ): void
 }
 
 /**
