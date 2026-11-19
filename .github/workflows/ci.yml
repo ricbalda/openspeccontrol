@@ -1,0 +1,83 @@
+# Fase 10 (tareas 10.1 y 10.2): integración continua.
+#
+# Cada PR y cada push a main ejecutan la matriz completa (3 sistemas × Node 22 y 24):
+#   npm ci → lint → typecheck → test → electron-vite build → arranque de prueba → dist:dir
+#
+# El arranque de prueba (scripts/ci-smoke.mjs, tarea 10.2) lanza la app con
+# --remote-debugging-port DENTRO de este workflow y falla si no existe #root o si hay
+# errores de consola. En Linux corre bajo xvfb-run (no hay pantalla en el runner).
+#
+# Estado de verificación: este workflow solo puede comprobarse al ejecutarse en GitHub
+# (no se ejecutó al escribirlo; sí se validó la sintaxis y que los scripts existen).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# un push nuevo a la misma rama/PR cancela la ejecución anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: ${{ matrix.os }} · Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [22, 24]
+    env:
+      # la CI nunca firma: sin esto electron-builder buscaría una identidad en el llavero de macOS
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # el proyecto se desarrolla con npm 12 (allowScripts en package.json, .npmrc vacío)
+      - name: Instalar npm 12
+        run: npm install -g npm@12
+
+      - name: Instalar xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends xvfb
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Build (electron-vite)
+        run: npx electron-vite build
+
+      # 10.2: la app debe arrancar, pintar #root y no mostrar errores de consola
+      - name: Arranque de prueba (Linux, xvfb)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node scripts/ci-smoke.mjs
+
+      - name: Arranque de prueba
+        if: runner.os != 'Linux'
+        run: node scripts/ci-smoke.mjs
+
+      # empaqueta sin instalador y sin firmar: comprueba que electron-builder y los fuses funcionan
+      - name: Empaquetar (dist:dir)
+        run: npm run dist:dir
