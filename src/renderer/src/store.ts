@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type {
+  AgentEvent,
   AgentInfo,
   ArchivedChange,
   ChangeSummary,
@@ -64,6 +65,12 @@ interface State {
   reposLoaded: boolean
   repos: RepoInfo[]
   repo: string | null
+  /** multi-repo-rail (fase 2): repos abiertos a la vez; `repo` es el activo (D-A) */
+  openRepos: string[]
+  /** estado por repo abierto (D-A); los campos de nivel superior son la proyección del activo */
+  views: Record<string, RepoView>
+  /** secciones del rail plegadas; persistidas en 'rail-collapsed' (D-F) */
+  collapsed: string[]
   agent: string
   session: SessionState | null
   events: LoggedEvent[]
@@ -106,6 +113,9 @@ export const useStore = create<State>(() => ({
   reposLoaded: false,
   repos: [],
   repo: null,
+  openRepos: [],
+  views: {},
+  collapsed: [],
   agent: '',
   session: null,
   events: [],
@@ -132,6 +142,140 @@ export const useStore = create<State>(() => ({
 }))
 const set = useStore.setState
 const get = useStore.getState
+
+// ---- multi-repo (multi-repo-rail, fase 2) ----------------------------------------
+// design.md D-A: el estado por repo vive en un mapa y los campos de nivel superior
+// son la proyección del activo; D-B: transcript y comentarios no se cachean (se
+// recargan al activar); D-E: cierre ordenado con `unsubscribe`.
+
+/** Máximo de repos abiertos a la vez (D-I): cada uno cuesta un vigilante de archivos. */
+export const MAX_OPEN_REPOS = 8
+
+/** Lo que el rail y el cambio de repo necesitan de cada repo abierto (D-A). El
+ *  transcript (`events`) y los comentarios no se guardan: se recargan al activar (D-B). */
+export interface RepoView {
+  session: SessionState | null
+  changes: ChangeSummary[]
+  archived: string[]
+  specs: SpecSummary[]
+  workflows: OptionalWorkflow[]
+  reviewInRepo: boolean
+  browse: Browse | null
+  git: GitInfo | null
+  changesLoaded: boolean
+  change: string | null
+  file: string | null
+}
+
+const emptyView = (): RepoView => ({
+  session: null,
+  changes: [],
+  archived: [],
+  specs: [],
+  workflows: [],
+  reviewInRepo: false,
+  browse: null,
+  git: null,
+  changesLoaded: false,
+  change: null,
+  file: null
+})
+
+/** Listas de ids en localStorage ('open-repos', 'rail-collapsed'); JSON inválido → null. */
+const readList = (k: string): string[] | null => {
+  const raw = ls.get(k)
+  if (!raw) return null
+  try {
+    const v: unknown = JSON.parse(raw)
+    return Array.isArray(v) && v.every((x) => typeof x === 'string') ? v : null
+  } catch {
+    return null
+  }
+}
+const writeList = (k: string, list: string[]) => ls.set(k, JSON.stringify(list))
+
+/** TODO(fase1): `{ type: 'unsubscribe'; repo }` se añade a `ClientMsg` en la fase 1
+ *  (otro worker, en paralelo sobre protocol.ts). Hasta integrar, este molde local
+ *  sigue el contrato del diseño (D-E); al integrar, el cast sobra. */
+const unsubscribeMsg = (repo: string): ClientMsg =>
+  ({ type: 'unsubscribe', repo }) as unknown as ClientMsg
+
+/** La proyección del activo pasa a `views[repo]`: la única vía de escritura (D-A). */
+function saveView(id: string) {
+  const s = get()
+  set({
+    views: {
+      ...s.views,
+      [id]: {
+        session: s.session,
+        changes: s.changes,
+        archived: s.archived,
+        specs: s.specs,
+        workflows: s.workflows,
+        reviewInRepo: s.reviewInRepo,
+        browse: s.browse,
+        git: s.git,
+        changesLoaded: s.changesLoaded,
+        change: s.change,
+        file: s.file
+      }
+    }
+  })
+}
+
+/** Escribe en la vista de un repo abierto (los de segundo plano actualizan solo aquí). */
+function setView(id: string, patch: (v: RepoView) => RepoView) {
+  if (!get().openRepos.includes(id)) return
+  set((s) => ({ views: { ...s.views, [id]: patch(s.views[id] ?? emptyView()) } }))
+}
+
+/** Sin ningún repo abierto: el centro vuelve a «Pick a repository». */
+function resetProjection() {
+  set({
+    repo: null,
+    session: null,
+    events: [],
+    changes: [],
+    archived: [],
+    specs: [],
+    workflows: [],
+    reviewInRepo: false,
+    browse: null,
+    git: null,
+    changesLoaded: false,
+    change: null,
+    file: null,
+    content: '',
+    comments: [],
+    rounds: [],
+    focusComment: null
+  })
+}
+
+/** Quita un repo de la lista de abiertos y arregla el activo (D-E, paso 2). */
+function dropRepo(id: string, opts: { unsubscribe?: boolean } = {}) {
+  clearRefreshTimer(id)
+  const openRepos = get().openRepos.filter((r) => r !== id)
+  const views = { ...get().views }
+  delete views[id]
+  writeList('open-repos', openRepos)
+  set({ openRepos, views })
+  if (opts.unsubscribe) sendMsg(unsubscribeMsg(id))
+  if (get().repo === id) {
+    dropPendingEvents()
+    const next = openRepos[0]
+    if (next) activateRepo(next)
+    else resetProjection()
+  }
+}
+
+const liveSession = (s: SessionState | null): boolean =>
+  !!s && (s.status === 'starting' || s.status === 'ready' || s.status === 'busy')
+
+/** La sesión de un repo abierto: la proyección si es el activo; si no, su RepoView. */
+function sessionOf(id: string): SessionState | null {
+  return get().repo === id ? get().session : (get().views[id]?.session ?? null)
+}
 
 // ---- toasts --------------------------------------------------------------------
 let toastId = 0
@@ -195,47 +339,86 @@ function dropPendingEvents() {
   pendingEvents = []
 }
 
-let refreshTimer: ReturnType<typeof setTimeout> | undefined
+// Refresco con debounce por repo (D-C): al activo le recarga la lista y el archivo
+// abierto; a uno de segundo plano solo su lista (loadChangesFor, que escribe en views).
+const refreshTimers = new Map<string, ReturnType<typeof setTimeout>>()
+function scheduleRefresh(repo: string) {
+  clearTimeout(refreshTimers.get(repo))
+  refreshTimers.set(
+    repo,
+    setTimeout(() => {
+      refreshTimers.delete(repo)
+      if (!get().openRepos.includes(repo)) return // cerrado mientras esperaba
+      if (get().repo === repo) {
+        void loadChanges()
+        void reloadFile()
+      } else {
+        void loadChangesFor(repo)
+      }
+    }, 200)
+  )
+}
+function clearRefreshTimer(repo: string) {
+  clearTimeout(refreshTimers.get(repo))
+  refreshTimers.delete(repo)
+}
+
 function onServer(m: ServerMsg) {
   if (m.type === 'error') return toast(m.message, 'error')
   if (m.type === 'menu') return menuAction(m.action) // Fase 4: menú nativo → renderer
   if (m.type === 'update_state') return void set({ update: m.state }) // Fase 9
-  if (m.repo !== get().repo) return
+  if (!get().openRepos.includes(m.repo)) return // D-C: mensajes de repos no abiertos
+  const active = m.repo === get().repo
   switch (m.type) {
     case 'session':
-      set({ session: m.session })
-      if (m.session?.status === 'ready') for (const f of readyWaiters.splice(0)) f()
+      // el session de RepoInfo alimenta el nombre de repo en avisos y el picker
       set((s) => ({
         repos: s.repos.map((r) => (r.id === m.repo ? { ...r, session: m.session } : r))
       }))
+      setView(m.repo, (v) => ({ ...v, session: m.session }))
+      if (active) {
+        set({ session: m.session })
+        if (m.session?.status === 'ready') for (const f of readyWaiters.splice(0)) f()
+      }
       break
     case 'replay':
+      if (!active) break // D-C: el transcript solo es el del activo (D-B)
       dropPendingEvents()
       set({ events: m.entries })
       break
     case 'event':
-      pendingEvents.push(m.entry)
-      if (SHOW_NOW.has(m.entry.event.kind)) flushEvents()
-      else pendingTimer ??= setTimeout(flushEvents, EVENT_BATCH_MS)
-      if (m.entry.event.kind === 'permission' || m.entry.event.kind === 'elicitation')
-        notifyAttention()
-      if (m.entry.event.kind === 'turn_end') {
-        notifyTurnEnd(m.entry.event.stopReason)
-        loadGit()
+      if (active) {
+        pendingEvents.push(m.entry)
+        if (SHOW_NOW.has(m.entry.event.kind)) flushEvents()
+        else pendingTimer ??= setTimeout(flushEvents, EVENT_BATCH_MS)
+        if (m.entry.event.kind === 'permission' || m.entry.event.kind === 'elicitation')
+          notifyAttention()
+        if (m.entry.event.kind === 'turn_end') {
+          notifyTurnEnd(m.entry.event.stopReason)
+          loadGit()
+        }
+      } else {
+        onBackgroundEvent(m.repo, m.entry.event)
       }
       break
     case 'artifacts_changed':
-      clearTimeout(refreshTimer)
-      refreshTimer = setTimeout(() => {
-        loadChanges()
-        reloadFile()
-      }, 200)
+      scheduleRefresh(m.repo)
       break
     case 'review_changed':
-      if (m.change === get().change) loadReview()
-      loadChanges()
+      if (active) {
+        if (m.change === get().change) loadReview()
+        loadChanges()
+      } else {
+        void loadChangesFor(m.repo)
+      }
       break
   }
+}
+
+/** Evento de un repo en segundo plano (D-C): sin transcript (D-B), solo avisos (D-J). */
+function onBackgroundEvent(repo: string, e: AgentEvent) {
+  if (e.kind === 'permission' || e.kind === 'elicitation') return notifyAttention()
+  if (e.kind === 'turn_end') return notifyTurnEnd(e.stopReason, repo)
 }
 
 /** OS notification, through the main process (Fase 5.3): it shows one only while
@@ -262,9 +445,16 @@ const STOP_TEXT: Record<string, string> = {
   error: 'Failed'
 }
 
-/** Long turns (build, review) finish while you are elsewhere: say so. */
-function notifyTurnEnd(stopReason: string) {
+/** Long turns (build, review) finish while you are elsewhere: say so. Con `repoId`
+ *  (un repo en segundo plano) no hay transcript a mano (D-B) y el aviso nombra el
+ *  repo (D-J); doneUnseen sigue siendo solo del activo. */
+function notifyTurnEnd(stopReason: string, repoId?: string) {
   if (document.hasFocus()) return
+  if (repoId) {
+    const name = get().repos.find((r) => r.id === repoId)?.name ?? repoId
+    notify(`${STOP_TEXT[stopReason] ?? stopReason} · ${name}`, 'The agent')
+    return
+  }
   // the request this turn answered: the last "user" entry
   const req = [...get().events].reverse().find((e) => e.event.kind === 'user')?.event
   const what =
@@ -299,29 +489,47 @@ export async function boot() {
       tools: cfg.tools ?? []
     })
   await loadRepos()
+  restoreOpenRepos()
+}
+
+/**
+ * multi-repo-rail (fase 2, D-H): restaura los repos abiertos, el activo y las
+ * secciones plegadas. La clave antigua 'repo' siembra la lista cuando no existe
+ * 'open-repos' (migración); los ids que ya no existan en el workspace se descartan
+ * sin error. Cada repo abierto se suscribe; las cargas de cambios de los repos en
+ * segundo plano se escalonan (de una en una) para no saturar `openspec list`.
+ */
+function restoreOpenRepos() {
+  set({ collapsed: readList('rail-collapsed') ?? [] })
+  const saved = readList('open-repos')
   const last = ls.get('repo')
-  // older versions stored the path relative to the single repos root
   const hit = last && get().repos.find((r) => r.id === last || (r.rel && r.rel === last))
-  if (hit) selectRepo(hit.id)
+  const exists = (id: string) => get().repos.some((r) => r.id === id)
+  // 'open-repos' manda; sin ella (o con JSON inválido), la clave antigua 'repo' siembra
+  const open = [...new Set((saved ?? (hit ? [hit.id] : [])).filter(exists))]
+  writeList('open-repos', open)
+  if (!open.length) return
+  const active = hit && open.includes(hit.id) ? hit.id : open[0]
+  set({
+    openRepos: open,
+    views: Object.fromEntries(open.map((id): [string, RepoView] => [id, emptyView()]))
+  })
+  activateRepo(active)
+  const bg = open.filter((id) => id !== active)
+  for (const id of bg) sendMsg({ type: 'subscribe', repo: id })
+  void (async () => {
+    for (const id of bg) await loadChangesFor(id)
+  })()
 }
 
 const applyWorkspace = (w: Workspace) => {
   set({ roots: w.roots, repos: w.repos, reposLoaded: true })
-  const { repo } = get()
-  if (repo && !w.repos.some((r) => r.id === repo)) {
-    dropPendingEvents()
-    set({
-      repo: null,
-      session: null,
-      events: [],
-      changes: [],
-      specs: [],
-      browse: null,
-      change: null,
-      file: null,
-      content: ''
-    })
-  }
+  // multi-repo (fase 2): los abiertos que ya no existan se quitan de la lista sin
+  // error (spec) y se sueltan sus vigilantes con unsubscribe (D-E) por si el
+  // núcleo no los limpió aún; si el que desaparece es el activo, se activa el
+  // primero que quede o el centro vuelve a «Pick a repository».
+  const exists = (id: string) => w.repos.some((r) => r.id === id)
+  for (const id of [...get().openRepos]) if (!exists(id)) dropRepo(id, { unsubscribe: true })
 }
 
 export async function loadRepos(refresh = false) {
@@ -410,29 +618,92 @@ export async function removeRoot(path: string) {
   if (w) applyWorkspace(w)
 }
 
-export function selectRepo(id: string) {
-  dropPendingEvents()
+/**
+ * multi-repo-rail (D-G): abrir un repo lo añade a la lista de abiertos (si no
+ * estaba) y lo activa, sin cerrar los demás. false (con un aviso) si ya hay
+ * MAX_OPEN_REPOS abiertos (D-I).
+ */
+export function openRepo(id: string): boolean {
+  const open = get().openRepos
+  if (!open.includes(id)) {
+    if (open.length >= MAX_OPEN_REPOS) {
+      toast(`Close a repository first: at most ${MAX_OPEN_REPOS} can be open at once`, 'error')
+      return false
+    }
+    set({ openRepos: [...open, id], views: { ...get().views, [id]: emptyView() } })
+    writeList('open-repos', get().openRepos)
+  }
+  activateRepo(id)
+  return true
+}
+
+/** Compat: el picker y el rail siguen llamando a selectRepo hasta la fase 3 (D-G). */
+export const selectRepo = (id: string) => openRepo(id)
+
+/**
+ * Activar un repo abierto (D-A): guarda la proyección del anterior en `views`,
+ * restaura la del nuevo al instante (stale-while-revalidate) y recarga el
+ * transcript (subscribe → replay) y los comentarios (D-B) en segundo plano.
+ */
+export function activateRepo(id: string) {
+  const prev = get().repo
+  if (prev) saveView(prev) // prev === id: reactivar conserva la vista y vacía el transcript
+  const v = get().views[id] ?? emptyView()
   ls.set('repo', id)
   const agent = ls.get(`agent:${id}`) || get().defaultAgent
+  dropPendingEvents()
   set({
     repo: id,
     agent,
-    session: null,
-    events: [],
-    changes: [],
-    archived: [],
-    specs: [],
-    browse: null,
-    git: null,
-    changesLoaded: false,
-    change: null,
-    file: null,
+    session: v.session,
+    changes: v.changes,
+    archived: v.archived,
+    specs: v.specs,
+    workflows: v.workflows,
+    reviewInRepo: v.reviewInRepo,
+    browse: v.browse,
+    git: v.git,
+    changesLoaded: v.changesLoaded,
+    change: v.change,
+    file: v.file,
     content: '',
     comments: [],
-    rounds: []
+    rounds: [],
+    focusComment: null,
+    events: []
   })
   sendMsg({ type: 'subscribe', repo: id })
-  loadChanges()
+  // revalidación en segundo plano (D-A): lo guardado se ve al instante
+  void loadChanges()
+  if (docPath()) void reloadFile()
+  if (get().change) void loadReview()
+}
+
+/**
+ * Cerrar un repo abierto (D-E). Con sesión viva (`starting`, `ready`, `busy`) pide
+ * confirmación a través de `opts.confirm` (la fase 3 la conecta al diálogo); al
+ * confirmar: `stop` y luego `unsubscribe`, fuera de la lista, y el activo pasa al
+ * primero que quede (o a «Pick a repository»). false si se cancela o no estaba abierto.
+ */
+export async function closeRepo(
+  id: string,
+  opts: { confirm?: (repo: string) => boolean | Promise<boolean> } = {}
+): Promise<boolean> {
+  if (!get().openRepos.includes(id)) return false
+  if (liveSession(sessionOf(id))) {
+    if (opts.confirm && !(await opts.confirm(id))) return false // cancelar lo deja tal cual
+    sendMsg({ type: 'stop', repo: id })
+  }
+  dropRepo(id, { unsubscribe: true })
+  return true
+}
+
+/** Plegar/desplegar la sección de un repo; se recuerda en 'rail-collapsed' (D-F). */
+export function toggleCollapsed(repo: string) {
+  const cur = get().collapsed
+  const next = cur.includes(repo) ? cur.filter((r) => r !== repo) : [...cur, repo]
+  set({ collapsed: next })
+  writeList('rail-collapsed', next)
 }
 
 export function setAgent(agent: string) {
@@ -441,13 +712,17 @@ export function setAgent(agent: string) {
   set({ agent })
 }
 
-export function startAgent(resume = true) {
-  const { repo, agent } = get()
-  if (repo) sendMsg({ type: 'start', repo, agent, resume })
+export function startAgent(resume = true, repoId?: string) {
+  const repo = repoId ?? get().repo
+  if (!repo) return
+  if (repo !== get().repo) activateRepo(repo) // D-D: activar primero
+  sendMsg({ type: 'start', repo, agent: get().agent, resume })
 }
-export const stopAgent = () => {
-  const r = get().repo
-  if (r) sendMsg({ type: 'stop', repo: r })
+export const stopAgent = (repoId?: string) => {
+  const repo = repoId ?? get().repo
+  if (!repo) return
+  if (repo !== get().repo) activateRepo(repo) // D-D: activar primero
+  sendMsg({ type: 'stop', repo })
 }
 export const cancelTurn = () => {
   const r = get().repo
@@ -479,9 +754,16 @@ export function ensureAgent(): Promise<boolean> {
   })
 }
 
-export async function runAction(action: LifecycleAction, change?: string, text?: string) {
-  const repo = get().repo
-  if (!repo || !(await ensureAgent())) return
+export async function runAction(
+  action: LifecycleAction,
+  change?: string,
+  text?: string,
+  repoId?: string
+) {
+  const repo = repoId ?? get().repo
+  if (!repo) return
+  if (repo !== get().repo) activateRepo(repo) // D-D: activar primero
+  if (!(await ensureAgent())) return
   await guard(api.action(repo, action, change, text))
 }
 
@@ -497,28 +779,52 @@ export async function initRepo() {
   if (get().session) startAgent(false)
 }
 
-export async function loadChanges() {
-  const repo = get().repo
+/** Carga la lista de cambios del repo activo (o de `repoId`, activándolo antes, D-D). */
+export async function loadChanges(repoId?: string) {
+  const repo = repoId ?? get().repo
   if (!repo) return
-  loadGit()
+  if (repo !== get().repo) activateRepo(repo) // D-D: activar primero
+  void loadGit()
+  await loadChangesInto(repo)
+}
+
+/** Carga de fondo (D-D): escribe solo en `views[repo]` y comprueba que siga abierto. */
+export async function loadChangesFor(repo: string) {
+  await Promise.all([loadChangesInto(repo), loadGitInto(repo)])
+}
+
+async function loadChangesInto(repo: string) {
   const r = await guard(api.changes(repo))
-  if (!r || get().repo !== repo) return
-  set({
-    changes: r.active,
-    archived: r.archived,
-    specs: r.specs,
-    workflows: r.workflows,
-    reviewInRepo: r.reviewInRepo,
-    changesLoaded: true
-  })
-  const { browse } = get()
-  if (browse?.kind === 'spec' && !r.specs.some((x) => x.name === browse.name))
-    set({ browse: null, content: '' })
-  if (browse?.kind === 'archived' && !r.archived.includes(browse.name))
-    set({ browse: null, content: '' })
-  const { change } = get()
-  if (change && !r.active.some((c) => c.name === change))
-    set({ change: null, file: null, content: '' })
+  if (!r || !get().openRepos.includes(repo)) return // cerrado o desaparecido mientras cargaba
+  if (get().repo === repo) {
+    set({
+      changes: r.active,
+      archived: r.archived,
+      specs: r.specs,
+      workflows: r.workflows,
+      reviewInRepo: r.reviewInRepo,
+      changesLoaded: true
+    })
+    const { browse } = get()
+    if (browse?.kind === 'spec' && !r.specs.some((x) => x.name === browse.name))
+      set({ browse: null, content: '' })
+    if (browse?.kind === 'archived' && !r.archived.includes(browse.name))
+      set({ browse: null, content: '' })
+    const { change } = get()
+    if (change && !r.active.some((c) => c.name === change))
+      set({ change: null, file: null, content: '' })
+  } else {
+    // respuesta tardía (2.4): al estado de su repo, sin tocar la proyección del activo
+    setView(repo, (v) => ({
+      ...v,
+      changes: r.active,
+      archived: r.archived,
+      specs: r.specs,
+      workflows: r.workflows,
+      reviewInRepo: r.reviewInRepo,
+      changesLoaded: true
+    }))
+  }
 }
 
 /** What the open view would commit: the active change, or the archived one. */
@@ -527,13 +833,26 @@ const gitScope = () => {
   return browse?.kind === 'archived' ? { archived: browse.name } : change ? { change } : {}
 }
 
-/** The repo's branch and the open change's uncommitted files (quietly: no toast when git is missing). */
-export async function loadGit() {
-  const repo = get().repo
+/** La rama del repo y los archivos sin confirmar del cambio abierto (silenciosa:
+ *  sin toast si falta git). Con `repoId` de un repo en segundo plano, lo activa (D-D). */
+export async function loadGit(repoId?: string) {
+  const repo = repoId ?? get().repo
   if (!repo) return
+  if (repo !== get().repo) activateRepo(repo) // D-D: activar primero
   const scope = gitScope()
   const g = await api.git(repo, scope).catch(() => null)
-  if (get().repo === repo && JSON.stringify(gitScope()) === JSON.stringify(scope)) set({ git: g })
+  if (!get().openRepos.includes(repo)) return
+  if (get().repo === repo) {
+    if (JSON.stringify(gitScope()) === JSON.stringify(scope)) set({ git: g })
+  } else {
+    setView(repo, (v) => ({ ...v, git: g })) // respuesta tardía (2.4)
+  }
+}
+
+/** Rama de un repo en segundo plano, sin activarlo y sin tocar la proyección. */
+async function loadGitInto(repo: string) {
+  const g = await api.git(repo, {}).catch(() => null)
+  if (get().openRepos.includes(repo)) setView(repo, (v) => ({ ...v, git: g }))
 }
 
 /** "Create branch change/<name>": the change's files come along to the new branch. */
