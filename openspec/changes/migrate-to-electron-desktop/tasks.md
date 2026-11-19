@@ -111,12 +111,12 @@ Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). 
 
 ## 9. Actualización automática (M)
 
-- [ ] 9.1 Implementar `desktop/updater.ts` sobre `electron-updater` (desactivado si `!app.isPackaged` o `OSC_NO_UPDATE_CHECK=1`; al arrancar y cada 24 h; `autoDownload` y `autoInstallOnAppQuit`) y revisar `dev-app-update.yml` — verificación: en modo desarrollo el estado es `disabled`
-- [ ] 9.2 Cambiar `UpdateInfo` por `UpdateState` en `protocol.ts` y emitirlo como `ServerMsg` `update_state` — verificación: `npm run typecheck` pasa y el renderer recibe los cambios de estado
-- [ ] 9.3 Reescribir `UpdatePill` ("Descargando x.y.z (n %)" → "Reiniciar para actualizar a x.y.z") con la confirmación de cierre seguro y `quitAndInstall()`, conservando "ocultar hasta la próxima versión" — verificación: con un agente `busy` aparece la confirmación antes de reiniciar
-- [ ] 9.4 Implementar Ayuda → Buscar actualizaciones con el resultado, incluido "Ya tienes la última versión" — verificación: la acción muestra un mensaje en cada estado
-- [ ] 9.5 Reescribir `updates.test.ts` como `updater.test.ts` sobre la máquina de estados, incluida la regla de versión preliminar con `isNewer` — verificación: `npm test` pasa con los casos de estado y de versión preliminar
-- [ ] 9.6 Aceptación de la fase — verificación: con un release de borrador `0.1.1-test` en `ricbalda/openspeccontrol`, la 0.1.0 instalada en los 3 sistemas operativos lo descarga, lo ofrece y se actualiza al reiniciar
+- [x] 9.1 (implementada y con tests; verificación manual pendiente) Implementar `desktop/updater.ts` sobre `electron-updater` (desactivado si `!app.isPackaged` o `OSC_NO_UPDATE_CHECK=1`; al arrancar y cada 24 h; `autoDownload` y `autoInstallOnAppQuit`) y revisar `dev-app-update.yml` — verificación: en modo desarrollo el estado es `disabled`
+- [x] 9.2 (implementada y con tests; verificación manual pendiente) Cambiar `UpdateInfo` por `UpdateState` en `protocol.ts` y emitirlo como `ServerMsg` `update_state` — verificación: `npm run typecheck` pasa y el renderer recibe los cambios de estado
+- [x] 9.3 (implementada y con tests; verificación manual pendiente) Reescribir `UpdatePill` ("Descargando x.y.z (n %)" → "Reiniciar para actualizar a x.y.z") con la confirmación de cierre seguro y `quitAndInstall()`, conservando "ocultar hasta la próxima versión" — verificación: con un agente `busy` aparece la confirmación antes de reiniciar
+- [x] 9.4 (implementada y con tests; verificación manual pendiente) Implementar Ayuda → Buscar actualizaciones con el resultado, incluido "Ya tienes la última versión" — verificación: la acción muestra un mensaje en cada estado
+- [x] 9.5 (implementada y con tests; verificación manual pendiente) Reescribir `updates.test.ts` como `updater.test.ts` sobre la máquina de estados, incluida la regla de versión preliminar con `isNewer` — verificación: `npm test` pasa con los casos de estado y de versión preliminar
+- [ ] 9.6 (pendiente: requiere releases reales en 3 SO; ojo: isNewer rechaza `0.1.1-test`, la prueba necesita una versión estable o ajustar la regla) Aceptación de la fase — verificación: con un release de borrador `0.1.1-test` en `ricbalda/openspeccontrol`, la 0.1.0 instalada en los 3 sistemas operativos lo descarga, lo ofrece y se actualiza al reiniciar
 
 ## 10. CI/CD (M)
 
