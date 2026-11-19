@@ -24,8 +24,10 @@ import { cliViews, closeDb, comments, events, migrateRepoIds, openDb, rounds } f
 import * as drafts from './drafts.ts'
 import type { Draft, DraftSummary } from './drafts.ts'
 import { Hub } from './acp/hub.ts'
+import * as drafts from './drafts.ts'
 import * as openspec from './openspec.ts'
 import { hasOpenSpec, initDataDir, oscVersion, safeResolve, setVersion } from './repos.ts'
+import { MAX_ACTION_TEXT, type Draft, type DraftMode } from '@shared/ipc.ts'
 import {
   addRoot,
   findRepos,
@@ -246,6 +248,34 @@ export class OscCore {
     if (open && closeRound(repo, abs, open.change)) this.reviewChanged(repo, open.change)
     s.prompt(s.agent.command(action, args), label).catch(() => {})
     return { ok: true }
+  }
+
+  // ---- drafts (add-proposal-drafts, design D-5) --------------------------------
+
+  /**
+   * Envía un borrador al agente de su repositorio reutilizando action(): exige
+   * un borrador sin enviar, el tope de 4000 caracteres y contenido no vacío
+   * para propose, y solo lo marca como enviado cuando action() no lanza. Si no
+   * hay sesión o el agente está ocupado, el borrador queda tal cual (el
+   * renderer conecta el agente antes con ensureAgent, como runAction).
+   */
+  async sendDraft(id: string, mode: DraftMode): Promise<Draft> {
+    const d = await drafts.get(id)
+    if (!d) throw new OscError('not_found', 'draft not found')
+    const { repo } = this.repoOf(d.repo)
+    if (d.status !== 'draft') throw new OscError('conflict', 'draft already sent')
+    const body = d.body.trim()
+    if (mode === 'propose' && !body) throw new OscError('invalid', 'describe the change')
+    if (body.length > MAX_ACTION_TEXT)
+      throw new OscError('too_large', `draft is longer than ${MAX_ACTION_TEXT} characters`)
+    // action() rechaza solo la falta de sesión: no espera el turno
+    // (s.prompt(...).catch(() => {})), así que un agente ocupado habría que
+    // comprobarlo aquí o el borrador se marcaría enviado sin llegar al agente.
+    const s = this.hub.get(repo)
+    if (s?.status !== 'ready')
+      throw new OscError('conflict', s ? 'agent is busy' : 'connect an agent first')
+    await this.action({ repo, action: mode, text: body })
+    return drafts.markSent(id, mode)
   }
 
   // archived change: its artifacts plus the comments and review rounds kept under its old name
