@@ -9,13 +9,13 @@
 
 ## 2. Estado por repo en el store
 
-- [ ] 2.1 Añadir `openRepos`, `views` (`RepoView`) y `collapsed` al `store`, con `MAX_OPEN_REPOS = 8` y las claves de `localStorage` `open-repos` y `rail-collapsed` — verificación: prueba de renderer que serializa y restaura las claves, e ignora JSON inválido
-- [ ] 2.2 Implementar `openRepo(id)`, `activateRepo(id)` y `closeRepo(id)`: guardar y restaurar la proyección del activo, revalidar al activar, y respetar el límite de 8 con un aviso — verificación: pruebas con dos repos: el cambio y la pestaña abiertos en A se conservan al ir a B y volver; el noveno repo no se abre
-- [ ] 2.3 Reescribir `onServer` para enrutar por repo (activo / en segundo plano / no abierto) según la tabla del diseño, con `loadChangesFor(repo)` y debounce por repo — verificación: pruebas donde un `session`, un `artifacts_changed` y un `turn_end` de B actualizan solo `views.B` sin tocar los campos del activo
-- [ ] 2.4 Dar un parámetro `repo` opcional a `loadChanges`, `loadGit`, `startAgent`, `stopAgent` y `runAction`; las acciones sobre un repo en segundo plano lo activan primero — verificación: una respuesta de A que llega tras activar B no modifica lo que ve B (prueba con promesas diferidas)
-- [ ] 2.5 Cierre ordenado: `closeRepo` pide confirmación si hay sesión viva, envía `stop` y `unsubscribe`, y activa el siguiente repo o el estado vacío — verificación: pruebas de cierre con y sin agente, cancelando y confirmando
-- [ ] 2.6 `boot()` restaura `open-repos` y el activo, se suscribe a cada repo abierto, escalona la carga de cambios y descarta los repos que ya no existen en el workspace (también en `applyWorkspace` y `removeRoot`) — verificación: pruebas de arranque con 2 repos y con uno desaparecido; la clave antigua `repo` siembra la lista
-- [ ] 2.7 Criterio de aceptación de la fase: `npm run typecheck`, `npm run lint` y `npm test` pasan y los tests existentes del store no cambian; con un solo repo abierto el comportamiento es el de antes
+- [x] 2.1 Añadir `openRepos`, `views` (`RepoView`) y `collapsed` al `store`, con `MAX_OPEN_REPOS = 8` y las claves de `localStorage` `open-repos` y `rail-collapsed` — verificación: prueba de renderer que serializa y restaura las claves, e ignora JSON inválido
+- [x] 2.2 Implementar `openRepo(id)`, `activateRepo(id)` y `closeRepo(id)`: guardar y restaurar la proyección del activo, revalidar al activar, y respetar el límite de 8 con un aviso — verificación: pruebas con dos repos: el cambio y la pestaña abiertos en A se conservan al ir a B y volver; el noveno repo no se abre
+- [x] 2.3 Reescribir `onServer` para enrutar por repo (activo / en segundo plano / no abierto) según la tabla del diseño, con `loadChangesFor(repo)` y debounce por repo — verificación: pruebas donde un `session`, un `artifacts_changed` y un `turn_end` de B actualizan solo `views.B` sin tocar los campos del activo
+- [x] 2.4 Dar un parámetro `repo` opcional a `loadChanges`, `loadGit`, `startAgent`, `stopAgent` y `runAction`; las acciones sobre un repo en segundo plano lo activan primero — verificación: una respuesta de A que llega tras activar B no modifica lo que ve B (prueba con promesas diferidas)
+- [x] 2.5 Cierre ordenado: `closeRepo` pide confirmación si hay sesión viva, envía `stop` y `unsubscribe`, y activa el siguiente repo o el estado vacío — verificación: pruebas de cierre con y sin agente, cancelando y confirmando
+- [x] 2.6 `boot()` restaura `open-repos` y el activo, se suscribe a cada repo abierto, escalona la carga de cambios y descarta los repos que ya no existen en el workspace (también en `applyWorkspace` y `removeRoot`) — verificación: pruebas de arranque con 2 repos y con uno desaparecido; la clave antigua `repo` siembra la lista
+- [x] 2.7 Criterio de aceptación de la fase: `npm run typecheck`, `npm run lint` y `npm test` pasan y los tests existentes del store no cambian; con un solo repo abierto el comportamiento es el de antes
 
 ## 3. Secciones del rail
 
