@@ -824,6 +824,30 @@ export async function sendDraft(id: string, mode: DraftMode, repoId?: string): P
   return true
 }
 
+// ---- borradores (fase 5, design D-6): autoguardado del editor ---------------------
+
+/** El guardado pendiente del editor de borradores abierto (null si no hay editor). */
+let draftFlusher: (() => void) | null = null
+
+/** El editor registra aqui su guardado pendiente; null al desmontarse. */
+export function setDraftFlusher(flush: (() => void) | null): void {
+  draftFlusher = flush
+}
+
+/**
+ * Fuerza el guardado pendiente del borrador abierto (D-6): la llaman el cambio de
+ * borrador, de cambio, de repo o de vista, el blur de los campos y
+ * visibilitychange/beforeunload (mejor esfuerzo).
+ */
+export function flushDraft(): void {
+  draftFlusher?.()
+}
+
+// D-6: cambiar de borrador, de cambio, de repo o de vista guarda antes lo pendiente
+useStore.subscribe((s, prev) => {
+  if (s.browse !== prev.browse || s.repo !== prev.repo || s.change !== prev.change) flushDraft()
+})
+
 export async function initRepo() {
   const { repo, agent } = get()
   if (!repo) return
