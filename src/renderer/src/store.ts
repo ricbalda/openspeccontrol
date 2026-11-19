@@ -20,7 +20,7 @@ import type {
   UpdateState,
   Workspace
 } from '@shared/protocol.ts'
-import type { ToolStatus } from '@shared/ipc.ts'
+import type { DraftSummary, ToolStatus } from '@shared/ipc.ts'
 import { api } from './lib/api.ts'
 import { checkResult } from './lib/update-text.ts'
 
@@ -46,6 +46,8 @@ export type Browse =
   | { kind: 'spec'; name: string; file: string }
   /** file: an artifact of the archived change, or HISTORY_TAB */
   | { kind: 'archived'; name: string; file: string; data: ArchivedChange }
+  /** add-proposal-drafts (D-6): un borrador abierto en el editor central. */
+  | { kind: 'draft'; id: string }
 
 export const HISTORY_TAB = '__history__'
 
@@ -71,6 +73,10 @@ interface State {
   views: Record<string, RepoView>
   /** secciones del rail plegadas; persistidas en 'rail-collapsed' (D-F) */
   collapsed: string[]
+  /** add-proposal-drafts (fase 4): historial de borradores por repo abierto (D-4).
+   *  Mapa global, no proyección: cada repo mantiene el suyo (también en segundo
+   *  plano) y D-4 manda recargar tras cada operación propia, así que no viaja en RepoView. */
+  draftsByRepo: Record<string, DraftSummary[]>
   agent: string
   session: SessionState | null
   events: LoggedEvent[]
@@ -120,6 +126,7 @@ export const useStore = create<State>(() => ({
   openRepos: [],
   views: {},
   collapsed: [],
+  draftsByRepo: {},
   agent: '',
   session: null,
   events: [],
@@ -1004,6 +1011,57 @@ export async function openSpec(name: string) {
     focusComment: null
   })
   await reloadFile()
+}
+
+// ---- add-proposal-drafts (fase 4: sección Drafts del rail) ----------------------
+
+/** Última petición de borradores lanzada por repo: si llega una respuesta de una
+ *  petición anterior (otra consulta del mismo repo, o el repo ya cerrado), no se pinta. */
+const draftLoadSeq = new Map<string, number>()
+
+/**
+ * Carga en `draftsByRepo[repo]` el historial de borradores del repo (D-4), con
+ * consulta opcional: la búsqueda sin acentos y por subcadenas la resuelve el
+ * núcleo (D-2). No activa el repo: es segura para uno en segundo plano porque
+ * cada respuesta solo escribe su propia clave, y una tardía se descarta.
+ */
+export async function loadDrafts(repo: string, query = '') {
+  const seq = (draftLoadSeq.get(repo) ?? 0) + 1
+  draftLoadSeq.set(repo, seq)
+  const r = await guard(api.drafts(repo, query.trim() || undefined))
+  if (!r || draftLoadSeq.get(repo) !== seq || !get().openRepos.includes(repo)) return
+  set((s) => ({ draftsByRepo: { ...s.draftsByRepo, [repo]: r } }))
+}
+
+/**
+ * Abre un borrador en el panel central con `browse: { kind: 'draft', id }` (D-6;
+ * el editor lo pinta la fase 5). Como `openSpec`, trabaja sobre el repo activo:
+ * el clic en la sección de un repo en segundo plano lo activa antes (`withRepo`, D-D).
+ */
+export function openDraft(id: string) {
+  set({
+    browse: { kind: 'draft', id },
+    change: null,
+    file: null,
+    content: '',
+    comments: [],
+    rounds: [],
+    focusComment: null
+  })
+}
+
+/**
+ * «New draft» (tarea 4.2): crea un borrador vacío en `repo`, lo abre en el editor
+ * y recarga el historial para que el nuevo aparezca (spec «Nuevo borrador»). En un
+ * repo en segundo plano lo activa antes (D-D, spec «Borrador de un repo en segundo
+ * plano»), igual que `runAction`.
+ */
+export async function createDraft(repo: string) {
+  if (repo !== get().repo) activateRepo(repo) // D-D: activar primero
+  const d = await guard(api.createDraft(repo))
+  if (!d || !get().openRepos.includes(repo)) return // el repo se cerró mientras creaba
+  openDraft(d.id) // el repo ya está activo: solo fija el editor
+  void loadDrafts(repo)
 }
 
 export async function loadReview() {
