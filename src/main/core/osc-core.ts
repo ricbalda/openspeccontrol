@@ -22,12 +22,10 @@ import type {
 import { agents, DEFAULT_AGENT, getAgent } from './agents.ts'
 import { cliViews, closeDb, comments, events, migrateRepoIds, openDb, rounds } from './db.ts'
 import * as drafts from './drafts.ts'
-import type { Draft, DraftSummary } from './drafts.ts'
 import { Hub } from './acp/hub.ts'
-import * as drafts from './drafts.ts'
 import * as openspec from './openspec.ts'
 import { hasOpenSpec, initDataDir, oscVersion, safeResolve, setVersion } from './repos.ts'
-import { MAX_ACTION_TEXT, type Draft, type DraftMode } from '@shared/ipc.ts'
+import { MAX_ACTION_TEXT, type Draft, type DraftMode, type DraftSummary } from '@shared/ipc.ts'
 import {
   addRoot,
   findRepos,
