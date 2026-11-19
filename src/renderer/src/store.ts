@@ -20,7 +20,7 @@ import type {
   UpdateState,
   Workspace
 } from '@shared/protocol.ts'
-import type { DraftSummary, ToolStatus } from '@shared/ipc.ts'
+import type { DraftMode, DraftSummary, ToolStatus } from '@shared/ipc.ts'
 import { api } from './lib/api.ts'
 import { checkResult } from './lib/update-text.ts'
 
@@ -801,6 +801,27 @@ export async function runAction(
   if (repo !== get().repo) activateRepo(repo) // D-D: activar primero
   if (!(await ensureAgent())) return
   await guard(api.action(repo, action, change, text))
+}
+
+/**
+ * Envía un borrador a OpenSpec (design D-5): activa su repo, conecta el agente
+ * si hace falta (ensureAgent, como runAction) y llama al núcleo, que solo marca
+ * el borrador como enviado cuando el agente acepta la acción. Tras un envío
+ * válido recarga el historial (loadDrafts) y el borrador abierto, que el editor
+ * muestra en solo lectura. false si el agente no arranca o el envío falla; en
+ * ese caso el error se muestra con guard y no cambia nada más.
+ */
+export async function sendDraft(id: string, mode: DraftMode, repoId?: string): Promise<boolean> {
+  const repo = repoId ?? get().repo
+  if (!repo) return false
+  if (repo !== get().repo) activateRepo(repo) // D-D: activar primero
+  if (!(await ensureAgent())) return false
+  const sent = await guard(api.sendDraft(id, mode))
+  if (!sent) return false
+  await loadDrafts(repo) // el historial lo muestra como enviado
+  const { repo: active, browse } = get()
+  if (active === repo && browse?.kind === 'draft' && browse.id === id) await openDraft(id) // el editor lo recarga en solo lectura
+  return true
 }
 
 export async function initRepo() {
