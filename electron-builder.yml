@@ -1,48 +1,98 @@
-appId: com.electron.app
-productName: openspeccontrol
+# Fase 8 (tareas 8.2 a 8.5): empaquetado y firma de OpenSpecControl.
+#
+# Sin secretos en el repositorio: la firma y la notarización se activan solo si
+# existen las variables de entorno correspondientes (ver build/SIGNING.md)
+# y scripts/dist.mjs para Azure Trusted Signing).
+appId: io.github.ricbalda.openspeccontrol
+productName: OpenSpecControl
+copyright: Copyright © 2026 Ricardo Balda
 directories:
   buildResources: build
-# Fase 7 (tarea 7.5): flip the security fuses after every pack
+  output: release/${version}
+# Fase 7 (tarea 7.5): voltea los fuses de seguridad tras cada empaquetado
 afterPack: scripts/electron-fuses.mjs
+# Solo el bundle compilado y package.json (electron-builder añade las
+# dependencias de producción por su cuenta). LICENSE y NOTICE (tarea 1.12)
+# viajan en el paquete para conservar la atribución MIT de OpenSpec Studio.
 files:
   - out/**
+  - package.json
   - LICENSE
   - NOTICE
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asar: true
 asarUnpack:
   - resources/**
+npmRebuild: false
+
+# ── Windows (8.3): NSIS por usuario, sin pedir administrador ────────────────
+# Firma (no verificable sin credenciales, ver build/SIGNING.md):
+#  · certificado:   CSC_LINK + CSC_KEY_PASSWORD (o WIN_CSC_LINK / WIN_CSC_KEY_PASSWORD)
+#  · Azure Trusted Signing: AZURE_TENANT_ID / AZURE_CLIENT_ID / AZURE_CLIENT_SECRET
+#    y AZURE_SIGN_ENDPOINT / AZURE_SIGN_ACCOUNT / AZURE_SIGN_PROFILE /
+#    AZURE_SIGN_PUBLISHER; scripts/dist.mjs los convierte en `win.azureSignOptions`.
+# Sin ninguna de las dos, electron-builder genera el instalador sin firmar.
 win:
   executableName: openspeccontrol
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - arm64
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  oneClick: true
+  # un instalador por arquitectura (~120 MB cada uno); el combinado x64+arm64 pesa ~240 MB
+  buildUniversalInstaller: false
+  perMachine: false
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+
+# ── macOS (8.4): dmg + zip universales, hardened runtime y notarización ─────
+# Notarización por variables de entorno (la hace @electron/notarize al firmar):
+#  · APPLE_API_KEY + APPLE_API_KEY_ID + APPLE_API_ISSUER, o
+#  · APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID
+# Identidad Developer ID: CSC_LINK + CSC_KEY_PASSWORD (o el llavero).
+# Sin credenciales se omite la notarización con un aviso (no falla el build).
+# No se declaran permisos de cámara, micrófono, Documentos ni Descargas
+# (no se usan): `extendInfo` queda sin esas claves.
 mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: universal
+    - target: zip
+      arch: universal
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+  notarize: true
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${productName}-${version}.${ext}
+
+# ── Linux (8.5): AppImage + deb para x64 y arm64, sin snap ──────────────────
 linux:
   target:
-    - AppImage
-    - snap
-    - deb
-  maintainer: electronjs.org
-  category: Utility
+    - target: AppImage
+      arch:
+        - x64
+        - arm64
+    - target: deb
+      arch:
+        - x64
+        - arm64
+  category: Development
+  maintainer: Ricardo Balda <ricbalda@users.noreply.github.com>
+  synopsis: Revisa cambios de OpenSpec como un documento y deja que tu agente los implemente
 appImage:
-  artifactName: ${name}-${version}.${ext}
-npmRebuild: false
+  # con dos arquitecturas el nombre debe incluir ${arch} para no pisarse
+  artifactName: ${productName}-${version}-${arch}.${ext}
+deb:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+# Auto-actualización (Fase 9): releases de GitHub
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: ricbalda
+  repo: openspeccontrol
