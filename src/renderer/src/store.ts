@@ -194,11 +194,8 @@ const readList = (k: string): string[] | null => {
 }
 const writeList = (k: string, list: string[]) => ls.set(k, JSON.stringify(list))
 
-/** TODO(fase1): `{ type: 'unsubscribe'; repo }` se añade a `ClientMsg` en la fase 1
- *  (otro worker, en paralelo sobre protocol.ts). Hasta integrar, este molde local
- *  sigue el contrato del diseño (D-E); al integrar, el cast sobra. */
-const unsubscribeMsg = (repo: string): ClientMsg =>
-  ({ type: 'unsubscribe', repo }) as unknown as ClientMsg
+/** Dejar de vigilar un repo (D-E): `{ type: 'unsubscribe'; repo }` (fase 1). */
+const unsubscribeMsg = (repo: string): ClientMsg => ({ type: 'unsubscribe', repo })
 
 /** La proyección del activo pasa a `views[repo]`: la única vía de escritura (D-A). */
 function saveView(id: string) {
@@ -415,9 +412,10 @@ function onServer(m: ServerMsg) {
   }
 }
 
-/** Evento de un repo en segundo plano (D-C): sin transcript (D-B), solo avisos (D-J). */
+/** Evento de un repo en segundo plano (D-C): sin transcript (D-B), solo avisos (D-J);
+ *  los dos nombran el repo (notifyAttention/notifyTurnEnd con repoId). */
 function onBackgroundEvent(repo: string, e: AgentEvent) {
-  if (e.kind === 'permission' || e.kind === 'elicitation') return notifyAttention()
+  if (e.kind === 'permission' || e.kind === 'elicitation') return notifyAttention(repo)
   if (e.kind === 'turn_end') return notifyTurnEnd(e.stopReason, repo)
 }
 
@@ -431,8 +429,16 @@ function notify(title: string, body: string, kind: 'info' | 'attention' = 'info'
   }
 }
 
-function notifyAttention() {
+/** Aviso de decisión pendiente (Fase 5.3): solo con la ventana sin foco y parpadeo
+ *  de la barra de tareas (`attention`). Con `repoId` (un repo en segundo plano) el
+ *  aviso nombra el repo, como el de fin de turno (D-J). */
+function notifyAttention(repoId?: string) {
   if (document.hasFocus()) return
+  if (repoId) {
+    const name = get().repos.find((r) => r.id === repoId)?.name ?? repoId
+    notify(`Needs your decision · ${name}`, 'The agent', 'attention')
+    return
+  }
   notify('OpenSpecControl', 'The agent needs your decision', 'attention')
 }
 
