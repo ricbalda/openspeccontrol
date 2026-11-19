@@ -80,7 +80,7 @@ function RepoPicker() {
       <div className="flex items-center gap-1">
         <button
           onClick={() => setOpen(!open)}
-          className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2 text-left shadow-sm hover:border-line-strong"
+          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2 text-left shadow-sm hover:border-line-strong"
         >
           <FolderGit2 size={17} className="shrink-0 text-accent" />
           <span className="min-w-0 flex-1">
@@ -107,10 +107,17 @@ function RepoPicker() {
               </span>
             )}
           </span>
-          <ChevronDown size={15} className="text-muted" />
+          <ChevronDown size={15} className="shrink-0 text-muted" />
         </button>
+        <IconButton title="Add folder…" onClick={() => openAddFolder()} className="shrink-0">
+          <FolderPlus size={14} />
+        </IconButton>
         {cur && (
-          <IconButton title={`Show ${cur.name} in the file manager`} onClick={showRepoInExplorer}>
+          <IconButton
+            title={`Show ${cur.name} in the file manager`}
+            onClick={showRepoInExplorer}
+            className="shrink-0"
+          >
             <FolderOpen size={14} />
           </IconButton>
         )}

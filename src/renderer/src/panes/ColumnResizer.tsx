@@ -1,13 +1,15 @@
-import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
-import { cx } from '../lib/ui.tsx'
+import { PanelResizer } from './PanelResizer.tsx'
 
 /** The agent column's width: at least this wide, and at most AGENT_MAX. */
 export const AGENT_MIN = 300
 export const AGENT_MAX = 900
+/** The rail's width (repositories and changes): at least RAIL_MIN, at most RAIL_MAX. */
+export const RAIL_MIN = 200
+export const RAIL_MAX = 480
 /** The middle pane (the document) keeps at least this much room. */
 export const CENTER_MIN = 480
-const STEP = 16
-const KEY = 'agent-width'
+const AGENT_KEY = 'agent-width'
+const RAIL_KEY = 'rail-width'
 
 /** Keep a width inside the limits, and leave the document its room in this window. */
 export function clampAgentWidth(w: number, viewport: number, railWidth: number): number {
@@ -15,24 +17,62 @@ export function clampAgentWidth(w: number, viewport: number, railWidth: number):
   return Math.round(Math.min(max, Math.max(AGENT_MIN, w)))
 }
 
-/** The width the user chose, or null for the layout's default. */
-export function readAgentWidth(): number | null {
+/** Same for the rail: what the agent column takes is not available to it. */
+export function clampRailWidth(w: number, viewport: number, agentWidth: number): number {
+  const max = Math.max(RAIL_MIN, Math.min(RAIL_MAX, viewport - agentWidth - CENTER_MIN))
+  return Math.round(Math.min(max, Math.max(RAIL_MIN, w)))
+}
+
+/**
+ * The widths in effect for the rail and the chat in this window. `pref*` is what the user chose
+ * (null: the layout's default, `def*`). The chat gives way first when the window shrinks, then
+ * the rail; a window that grows again brings the chosen widths back, because the preferences are
+ * kept as chosen. `rail` and `agent` are numbers to lay out with; `railInline` / `agentInline`
+ * say whether they must override the CSS defaults.
+ */
+export function resolveWidths(o: {
+  viewport: number
+  prefRail: number | null
+  prefAgent: number | null
+  defRail: number
+  defAgent: number
+}): { rail: number; agent: number; railInline: boolean; agentInline: boolean } {
+  const rail0 = o.prefRail === null ? o.defRail : Math.min(RAIL_MAX, Math.max(RAIL_MIN, o.prefRail))
+  const agent = clampAgentWidth(o.prefAgent ?? o.defAgent, o.viewport, rail0)
+  const rail = o.prefRail === null ? o.defRail : clampRailWidth(rail0, o.viewport, agent)
+  return {
+    rail,
+    agent,
+    railInline: o.prefRail !== null,
+    // the default chat only needs an override when a wider rail leaves it less room
+    agentInline: o.prefAgent !== null || (o.prefRail !== null && agent !== o.defAgent)
+  }
+}
+
+/** A stored width, or null when there is none (or it is not a width). */
+function readWidth(key: string): number | null {
   try {
-    const v = Number(localStorage.getItem(KEY))
+    const v = Number(localStorage.getItem(key))
     return Number.isFinite(v) && v > 0 ? v : null
   } catch {
     return null
   }
 }
 
-export function saveAgentWidth(w: number | null) {
+function saveWidth(key: string, w: number | null) {
   try {
-    if (w === null) localStorage.removeItem(KEY)
-    else localStorage.setItem(KEY, String(w))
+    if (w === null) localStorage.removeItem(key)
+    else localStorage.setItem(key, String(w))
   } catch {
     /* private mode */
   }
 }
+
+/** The width the user chose, or null for the layout's default. */
+export const readAgentWidth = (): number | null => readWidth(AGENT_KEY)
+export const saveAgentWidth = (w: number | null): void => saveWidth(AGENT_KEY, w)
+export const readRailWidth = (): number | null => readWidth(RAIL_KEY)
+export const saveRailWidth = (w: number | null): void => saveWidth(RAIL_KEY, w)
 
 /**
  * The handle on the agent column's left edge. Drag it to widen or narrow the
@@ -48,92 +88,48 @@ export function ColumnResizer({
   onChange: (w: number) => void
   onReset: () => void
   railWidth: () => number
-}) {
-  const drag = useRef<{ x: number; w: number } | null>(null)
-  const frame = useRef<number | null>(null)
-  const pending = useRef(width)
-
-  // dragging: the document must not select text, and the cursor stays a resize cursor
-  const endDrag = () => {
-    drag.current = null
-    document.body.style.userSelect = ''
-    document.body.style.cursor = ''
-    if (frame.current !== null) cancelAnimationFrame(frame.current)
-    frame.current = null
-  }
-  // unmounting mid-drag must not leave the page without text selection or with a resize cursor
-  useEffect(
-    () => () => {
-      document.body.style.userSelect = ''
-      document.body.style.cursor = ''
-      if (frame.current !== null) cancelAnimationFrame(frame.current)
-    },
-    []
-  )
-
-  const limits = () => ({ viewport: window.innerWidth, rail: railWidth() })
-  const clamp = (w: number) => {
-    const l = limits()
-    return clampAgentWidth(w, l.viewport, l.rail)
-  }
-
-  const down = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0) return
-    e.currentTarget.setPointerCapture(e.pointerId)
-    drag.current = { x: e.clientX, w: width }
-    document.body.style.userSelect = 'none'
-    document.body.style.cursor = 'col-resize'
-  }
-  const move = (e: PointerEvent<HTMLDivElement>) => {
-    const d = drag.current
-    if (!d) return
-    // the handle sits on the left edge: moving left widens the chat
-    pending.current = clamp(d.w + (d.x - e.clientX))
-    if (frame.current === null) {
-      // one layout update per frame: the document re-lays out (and its comments move) on each change
-      frame.current = requestAnimationFrame(() => {
-        frame.current = null
-        onChange(pending.current)
-      })
-    }
-  }
-  const up = (e: PointerEvent<HTMLDivElement>) => {
-    if (!drag.current) return
-    e.currentTarget.releasePointerCapture(e.pointerId)
-    endDrag()
-    onChange(pending.current)
-  }
-  const key = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
-    e.preventDefault()
-    const step = e.shiftKey ? STEP * 4 : STEP
-    onChange(clamp(width + (e.key === 'ArrowLeft' ? step : -step)))
-  }
-
-  const l = limits()
-  const max = clampAgentWidth(AGENT_MAX, l.viewport, l.rail)
+}): React.JSX.Element {
   return (
-    // a focusable window splitter (WAI-ARIA), not a decorative <hr>
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Resize the chat panel"
-      aria-valuenow={width}
-      aria-valuemin={AGENT_MIN}
-      aria-valuemax={max}
-      tabIndex={0}
+    <PanelResizer
+      edge="left"
+      width={width}
+      min={AGENT_MIN}
+      max={() => clampAgentWidth(AGENT_MAX, window.innerWidth, railWidth())}
+      clamp={(w) => clampAgentWidth(w, window.innerWidth, railWidth())}
+      label="Resize the chat panel"
       title="Drag to resize the chat · double-click to reset"
-      onPointerDown={down}
-      onPointerMove={move}
-      onPointerUp={up}
-      onPointerCancel={up}
-      onKeyDown={key}
-      onDoubleClick={onReset}
-      className={cx(
-        'group absolute inset-y-0 -left-1.5 z-20 w-3 cursor-col-resize touch-none outline-none'
-      )}
-    >
-      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-transparent transition group-hover:bg-accent group-focus-visible:bg-accent" />
-    </div>
+      onChange={onChange}
+      onReset={onReset}
+    />
+  )
+}
+
+/**
+ * The handle on the rail's right edge: the same behaviour, for the repository and changes
+ * column. The chat keeps the width it has; the rail only takes what the document can spare.
+ */
+export function RailResizer({
+  width,
+  onChange,
+  onReset,
+  agentWidth
+}: {
+  width: number
+  onChange: (w: number) => void
+  onReset: () => void
+  agentWidth: () => number
+}): React.JSX.Element {
+  return (
+    <PanelResizer
+      edge="right"
+      width={width}
+      min={RAIL_MIN}
+      max={() => clampRailWidth(RAIL_MAX, window.innerWidth, agentWidth())}
+      clamp={(w) => clampRailWidth(w, window.innerWidth, agentWidth())}
+      label="Resize the repositories panel"
+      title="Drag to resize the panel · double-click to reset"
+      onChange={onChange}
+      onReset={onReset}
+    />
   )
 }
