@@ -8,10 +8,14 @@
       rel="icon"
       href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%235b5bd6'/><path d='M9 10h14M9 16h10M9 22h6' stroke='white' stroke-width='3' stroke-linecap='round'/></svg>"
     />
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP (completed in Fase 7) -->
+    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <!-- Fase 7: everything the renderer needs is local: bundled scripts and
+         styles (or the vite dev server, same origin, HMR websocket included),
+         inline style attributes, data: images and fonts. No objects, no
+         frames, no base, no other connection target. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-src 'none'"
     />
   </head>
 

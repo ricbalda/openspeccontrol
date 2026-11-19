@@ -174,3 +174,39 @@ Ejecutado en **Windows 11 (osRelease 10.0.26300)** con Electron 45.3.4 (Node 24.
 - **Método de firma en Windows:** Azure Trusted Signing (`azureSignOptions`) o certificado (`CSC_LINK`/`CSC_KEY_PASSWORD`). Se decide en la Fase 8 según el certificado disponible; no cambia las specs ni las tareas.
 - **Arrastrar y soltar una carpeta sobre la ventana** (`webUtils.getPathForFile`): opcional dentro de 5.2; no afecta a los requisitos.
 - **Importar las preferencias de `localStorage`** de Studio: hoy se acepta perderlas; se reconsidera si el feedback lo pide.
+
+## Checklist de seguridad de Electron (Fase 7, tarea 7.7)
+
+Revisión punto por punto de la checklist oficial
+(https://electronjs.org/docs/latest/tutorial/security, 20 puntos) sobre el estado real del código:
+
+| # | Recomendación oficial | Estado en OpenSpecControl |
+|---|---|---|
+| 1 | Solo cargar contenido seguro | ✅ Todo el contenido es local: el `index.html` empaquetado (`loadFile`) o, en desarrollo, el dev server de vite en `localhost`. No se carga ningún recurso remoto; la CSP además prohíbe cualquier origen ajeno. |
+| 2 | No activar la integración de Node para contenido | ✅ `nodeIntegration: false` en `secureWebPreferences` (`src/main/desktop/security.ts`); verificado en runtime: `window.process` y `require` no existen en el renderer (dev y empaquetado). |
+| 3 | Activar el aislamiento de contexto | ✅ `contextIsolation: true` (idem); el preload expone `window.osc` vía `contextBridge` y nada más. |
+| 4 | Activar el sandbox del proceso | ✅ `sandbox: true` (idem; desde el spike 0.2, con preload CJS y `externalizeDeps: false`). |
+| 5 | Manejar los permisos de sesión | ✅ `applySessionSecurity` instala `setPermissionRequestHandler` y `setPermissionCheckHandler` que deniegan todo salvo `clipboard-sanitized-write` (tarea 7.3, cubierto por `test/main/security.test.ts`). |
+| 6 | No desactivar `webSecurity` | ✅ `webSecurity: true` fijo en `secureWebPreferences`; no se toca en ninguna ventana. |
+| 7 | Definir una Content-Security-Policy | ✅ CSP completa en `src/renderer/index.html` (tarea 7.2): `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-src 'none'`. HMR verificado bajo esa política (0 violaciones de consola en dev). |
+| 8 | No activar `allowRunningInsecureContent` | ✅ Nunca se establece (va a `true` solo si se desactiva `webSecurity`, que no ocurre). |
+| 9 | No activar features experimentales | ✅ `experimentalFeatures` nunca se establece. |
+| 10 | No usar `enableBlinkFeatures` | ✅ No se usa. |
+| 11 | `<webview>`: no usar `allowpopups` | ✅ Más estricto: no hay ningún `<webview>` y `will-attach-webview` se cancela siempre (`applyWindowSecurity`), así que no puede crearse uno con ninguna opción. |
+| 12 | Verificar las opciones de webview | ✅ Ídem: al cancelarse `will-attach-webview` no hay opciones que verificar. |
+| 13 | Desactivar o limitar la navegación | ✅ `will-navigate` se cancela para cualquier URL (`applyWindowSecurity`); la app es un único documento y no navega. |
+| 14 | Desactivar o limitar ventanas nuevas | ✅ `setWindowOpenHandler` devuelve siempre `deny` (idem). La app tiene una sola ventana. |
+| 15 | No usar `shell.openExternal` con contenido no confiable | ✅ Hoy la app no llama a `openExternal` en absoluto. Cuando la Fase 5.5 lo introduzca (enlaces del markdown), lo hará con lista de esquemas `http:`/`https:`/`mailto:`. |
+| 16 | Usar una versión actual de Electron | ✅ Electron 45.3.4 (Chromium 156, Node 24.22.3), la versión objetivo del diseño; se mantiene al día en cada release. |
+| 17 | Validar el emisor de todos los mensajes IPC | ✅ `isTrustedSender` (Fase 3, `src/main/ipc.ts`): cada `ipcMain.handle` y el canal `osc:client-msg` comprueban frame principal de la ventana, en el origen cargado; tests en `test/main/ipc.test.ts`. |
+| 18 | Evitar `file://`; preferir protocolos propios | ⚠️ **Desviación aceptada de momento:** en producción el renderer se carga con `loadFile` (`file://`). Es contenido propio, sin Node, con CSP estricta y sin navegación; migrar a `protocol.handle` con un protocolo custom queda anotado como mejora posterior (no cubierto por esta fase). |
+| 19 | Revisar los fuses | ✅ Tarea 7.5: hook `afterPack` propio (`scripts/electron-fuses.mjs`) desactiva `RunAsNode`, `EnableNodeOptionsEnvironmentVariable` y `EnableNodeCliInspectArguments`, y activa `EnableEmbeddedAsarIntegrityValidation` y `OnlyLoadAppFromAsar`. |
+| 20 | No exponer APIs de Electron a contenido no confiable | ✅ El preload (`src/preload/index.ts`) expone una función explícita por método (`window.osc`), nunca un `invoke` genérico ni `ipcRenderer.on` crudo; `onMessage` reenvía solo el mensaje y devuelve la baja. |
+
+Verificación de la fase (7.7): consola del renderer sin violaciones de CSP ni
+advertencias de seguridad (comprobado en runtime en dev y en el `index.html`
+construido, con el preload real: `FASE7_REPORT` con `cspViolations: []`), tests
+de `isTrustedSender` en verde (`test/main/ipc.test.ts`) y `npm test` completo
+en verde. Fuses verificados con `npx @electron/fuses read` sobre el paquete
+`--dir` y arranque del empaquetado con `ELECTRON_RUN_AS_NODE=1` ignorando la
+variable (arranca la app, no un intérprete de Node).

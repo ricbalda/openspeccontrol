@@ -2,6 +2,8 @@ appId: com.electron.app
 productName: openspeccontrol
 directories:
   buildResources: build
+# Fase 7 (tarea 7.5): flip the security fuses after every pack
+afterPack: scripts/electron-fuses.mjs
 files:
   - out/**
   - LICENSE

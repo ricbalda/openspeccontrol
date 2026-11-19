@@ -24,6 +24,7 @@ import {
   ToolCard,
   TurnEnd
 } from '../agent/cards.tsx'
+import { MissingToolsNote } from './ToolsDialog.tsx'
 
 function Row({ it, last }: { it: Item; last?: boolean }) {
   switch (it.type) {
@@ -283,6 +284,8 @@ export function AgentPanel() {
                 </div>
               )}
             </div>
+            {/* Fase 6: warn when the external CLIs the agents need are missing */}
+            <MissingToolsNote />
             <div className="flex gap-2">
               <Button variant="primary" size="lg" onClick={() => startAgent(true)}>
                 <Plug size={15} /> Connect

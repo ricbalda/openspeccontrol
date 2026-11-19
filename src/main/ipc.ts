@@ -33,6 +33,7 @@ import {
   settingsBody
 } from './core/schemas.ts'
 import { updateInfo } from './desktop/updater.ts'
+import { detectTools } from './desktop/tools.ts'
 
 // ---- trusted sender --------------------------------------------------------------
 
@@ -155,7 +156,8 @@ export function registerIpc(opts: { core: OscCore; window: () => WindowRef }): I
   }
 
   // workspace
-  handle('config', () => core.config())
+  // Fase 6: config() carries the dependency check (node, npx, openspec, git)
+  handle('config', async () => ({ ...(await core.config()), tools: await detectTools() }))
   handle('update', () => updateInfo())
   handle('repos', (a) => core.repos(check(z.boolean(), a[0] ?? false)))
   handle('addRoot', (a) => core.addRoot(parseOrThrow(rootBody, { path: a[0] })))

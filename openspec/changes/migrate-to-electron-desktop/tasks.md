@@ -57,15 +57,15 @@ Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). 
 
 ## 4. Shell de escritorio: ventana, ciclo de vida y menú (M)
 
-- [ ] 4.1 Activar `app.requestSingleInstanceLock()` y el evento `second-instance` — verificación: abrir la app dos veces enfoca la misma ventana y deja un solo proceso
-- [ ] 4.2 Implementar `desktop/window-state.ts` (tamaño, posición y maximizado en `~/.openspeccontrol/window-state.json`, comprobando `screen.getAllDisplays`, mínimo 1024×640) — verificación: test de restauración con monitor presente y ausente, y comprobación manual al reabrir
-- [ ] 4.3 Mostrar la ventana con `show: false` + `ready-to-show` y `backgroundColor` según `nativeTheme.shouldUseDarkColors` — verificación: no hay destello blanco al arrancar con tema oscuro
-- [ ] 4.4 Implementar el cierre seguro en `close` (Windows/Linux) y `before-quit` con `dialog.showMessageBox` si hay sesión `busy` o `pendingInteractions > 0`, seguido de `await core.shutdown()` y `app.exit(0)` — verificación: con un agente `busy`, "Cancelar" mantiene la app y "Cerrar igual" no deja procesos huérfanos en el Administrador de tareas / `ps`
-- [ ] 4.5 Aplicar el ciclo de vida por plataforma: macOS no sale en `window-all-closed` y `activate` recrea la ventana; Windows/Linux salen tras 4.4 — verificación: en macOS cerrar y reabrir desde el dock muestra el `replay`
-- [ ] 4.6 Implementar `desktop/menu.ts` (Archivo, Editar con roles, Ver sin DevTools si está empaquetada, Ventana, Ayuda) y el `ServerMsg` de tipo `menu` en `protocol.ts`; quitar `autoHideMenuBar` — verificación: `Cmd/Ctrl+C` y `V` funcionan en los inputs y las acciones del menú llegan al renderer
-- [ ] 4.7 Gestionar `render-process-gone` y `unresponsive`: registrar el motivo y ofrecer recargar — verificación: simular la caída del renderer y comprobar que la recarga recupera el transcript
-- [ ] 4.8 Fijar `app.setAppUserModelId('io.github.ricbalda.openspeccontrol')` y `app.setName('OpenSpecControl')` — verificación: las notificaciones y el icono de la barra de tareas en Windows muestran "OpenSpecControl"
-- [ ] 4.9 Aceptación de la fase — verificación: abrir dos veces enfoca la misma ventana, el tamaño y la posición persisten y cerrar con un agente `busy` pide confirmación sin dejar procesos huérfanos
+- [x] 4.1 (implementada y con tests unitarios; verificación manual pendiente) Activar `app.requestSingleInstanceLock()` y el evento `second-instance` — verificación: abrir la app dos veces enfoca la misma ventana y deja un solo proceso
+- [x] 4.2 (implementada y con tests unitarios; verificación manual pendiente) Implementar `desktop/window-state.ts` (tamaño, posición y maximizado en `~/.openspeccontrol/window-state.json`, comprobando `screen.getAllDisplays`, mínimo 1024×640) — verificación: test de restauración con monitor presente y ausente, y comprobación manual al reabrir
+- [x] 4.3 (implementada y con tests unitarios; verificación manual pendiente) Mostrar la ventana con `show: false` + `ready-to-show` y `backgroundColor` según `nativeTheme.shouldUseDarkColors` — verificación: no hay destello blanco al arrancar con tema oscuro
+- [x] 4.4 (implementada y con tests unitarios; verificación manual pendiente) Implementar el cierre seguro en `close` (Windows/Linux) y `before-quit` con `dialog.showMessageBox` si hay sesión `busy` o `pendingInteractions > 0`, seguido de `await core.shutdown()` y `app.exit(0)` — verificación: con un agente `busy`, "Cancelar" mantiene la app y "Cerrar igual" no deja procesos huérfanos en el Administrador de tareas / `ps`
+- [x] 4.5 (implementada y con tests unitarios; verificación manual pendiente) Aplicar el ciclo de vida por plataforma: macOS no sale en `window-all-closed` y `activate` recrea la ventana; Windows/Linux salen tras 4.4 — verificación: en macOS cerrar y reabrir desde el dock muestra el `replay`
+- [x] 4.6 (implementada y con tests unitarios; verificación manual pendiente) Implementar `desktop/menu.ts` (Archivo, Editar con roles, Ver sin DevTools si está empaquetada, Ventana, Ayuda) y el `ServerMsg` de tipo `menu` en `protocol.ts`; quitar `autoHideMenuBar` — verificación: `Cmd/Ctrl+C` y `V` funcionan en los inputs y las acciones del menú llegan al renderer
+- [x] 4.7 (implementada y con tests unitarios; verificación manual pendiente) Gestionar `render-process-gone` y `unresponsive`: registrar el motivo y ofrecer recargar — verificación: simular la caída del renderer y comprobar que la recarga recupera el transcript
+- [x] 4.8 (implementada y con tests unitarios; verificación manual pendiente) Fijar `app.setAppUserModelId('io.github.ricbalda.openspeccontrol')` y `app.setName('OpenSpecControl')` — verificación: las notificaciones y el icono de la barra de tareas en Windows muestran "OpenSpecControl"
+- [ ] 4.9 (pendiente: comprobaciones manuales de ventana y cierre con agente busy) Aceptación de la fase — verificación: abrir dos veces enfoca la misma ventana, el tamaño y la posición persisten y cerrar con un agente `busy` pide confirmación sin dejar procesos huérfanos
 
 ## 5. Integraciones nativas (M)
 
@@ -81,22 +81,22 @@ Numeración = fases y tareas de `Docs/plan-migracion-electron.md` (sección 6). 
 
 ## 6. Entorno de ejecución: PATH, variables y diagnóstico (M)
 
-- [ ] 6.1 Implementar `desktop/shell-env.ts`: en macOS/Linux, antes de crear `OscCore`, ejecutar `$SHELL -ilc` con delimitadores y timeout de unos 5 s, fusionar `PATH`, proxy y variables `OSC_*`/`OPENSPEC_*`/`REPOS_ROOT`/`DEFAULT_AGENT` y, si falla, añadir rutas conocidas — verificación: `shell-env.test.ts` cubre el parseo con delimitadores, el timeout y el fallback
-- [ ] 6.2 Conservar el reflejo de `http_proxy`/`https_proxy`/`no_proxy` en mayúsculas para los agentes (`agentEnv` en `hub.ts`) — verificación: test que el entorno del agente trae las variables en ambos casos
-- [ ] 6.3 Implementar `desktop/tools.ts` para detectar `node`, `npx`, `openspec` (`OPENSPEC_BIN`) y `git` y exponer `config().tools` (`ToolStatus`) — verificación: `tools.test.ts` con herramientas presentes y ausentes
-- [ ] 6.4 Mostrar el aviso con `npm install -g @fission-ai/openspec` en "Set up OpenSpec" y en el panel del agente, y añadir el diálogo Ayuda → Diagnóstico de dependencias — verificación: con `openspec` desinstalado el diagnóstico lo marca con el comando
-- [ ] 6.5 Tratar WSL como carpeta de red: mantener el polling de chokidar para `/mnt/*` y documentar `\\wsl$\…` — verificación: añadir un repo en `\\wsl.localhost\…` y listar sus cambios
-- [ ] 6.6 Aceptación de la fase — verificación: en macOS y Linux, al abrir la app desde el dock/lanzador, encuentra `openspec`, `npx` y `git` instalados con nvm, volta o homebrew
+- [x] 6.1 Implementar `desktop/shell-env.ts`: en macOS/Linux, antes de crear `OscCore`, ejecutar `$SHELL -ilc` con delimitadores y timeout de unos 5 s, fusionar `PATH`, proxy y variables `OSC_*`/`OPENSPEC_*`/`REPOS_ROOT`/`DEFAULT_AGENT` y, si falla, añadir rutas conocidas — verificación: `shell-env.test.ts` cubre el parseo con delimitadores, el timeout y el fallback
+- [x] 6.2 Conservar el reflejo de `http_proxy`/`https_proxy`/`no_proxy` en mayúsculas para los agentes (`agentEnv` en `hub.ts`) — verificación: test que el entorno del agente trae las variables en ambos casos
+- [x] 6.3 Implementar `desktop/tools.ts` para detectar `node`, `npx`, `openspec` (`OPENSPEC_BIN`) y `git` y exponer `config().tools` (`ToolStatus`) — verificación: `tools.test.ts` con herramientas presentes y ausentes
+- [x] 6.4 Mostrar el aviso con `npm install -g @fission-ai/openspec` en "Set up OpenSpec" y en el panel del agente, y añadir el diálogo Ayuda → Diagnóstico de dependencias — verificación: con `openspec` desinstalado el diagnóstico lo marca con el comando
+- [ ] 6.5 (parcial: polling /mnt existente; UNC testeado con skip por falta de distro WSL) Tratar WSL como carpeta de red: mantener el polling de chokidar para `/mnt/*` y documentar `\\wsl$\…` — verificación: añadir un repo en `\\wsl.localhost\…` y listar sus cambios
+- [ ] 6.6 (pendiente: requiere macOS y Linux) Aceptación de la fase — verificación: en macOS y Linux, al abrir la app desde el dock/lanzador, encuentra `openspec`, `npx` y `git` instalados con nvm, volta o homebrew
 
 ## 7. Endurecimiento de seguridad (S–M)
 
-- [ ] 7.1 Fijar `webPreferences`: `contextIsolation`, `sandbox`, sin `nodeIntegration`, `webSecurity`, `spellcheck: false`, `navigateOnDragDrop: false` — verificación: `window.process` y `require` no existen en la consola del renderer
-- [ ] 7.2 Completar la CSP de `src/renderer/index.html` y comprobar el HMR; si no funciona, inyectar una variante para desarrollo — verificación: `npm run dev` con HMR y la consola sin violaciones de CSP
-- [ ] 7.3 Denegar permisos salvo `clipboard-sanitized-write` (`setPermissionRequestHandler` y `setPermissionCheckHandler`) y bloquear `will-attach-webview` y ventanas nuevas — verificación: test o comprobación manual de que otros permisos se deniegan
-- [ ] 7.4 Mantener `repoPath()`, `safeResolve` (para `file()` y el sandbox de ACP), `validChange`, `MAX_DOC_BYTES` y `capped()` — verificación: pasan `sandbox.test.ts`, `schemas.test.ts` y los demás tests del núcleo
-- [ ] 7.5 Configurar los fuses de Electron (`RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` desactivados; `EnableEmbeddedAsarIntegrityValidation`, `OnlyLoadAppFromAsar` activados) — verificación: `npx @electron/fuses read` sobre el paquete muestra los valores esperados y lanzar la app instalada con `ELECTRON_RUN_AS_NODE=1` arranca la aplicación normal, no un intérprete de Node.js
-- [ ] 7.6 Escribir la sección Security del README — verificación: describe sin puerto ni autenticación de red, IPC validado y permisos de los agentes
-- [ ] 7.7 Aceptación de la fase — verificación: checklist de seguridad de Electron revisada punto por punto en `design.md`, consola del renderer sin advertencias de seguridad y tests de `isTrustedSender` en verde
+- [x] 7.1 Fijar `webPreferences`: `contextIsolation`, `sandbox`, sin `nodeIntegration`, `webSecurity`, `spellcheck: false`, `navigateOnDragDrop: false` — verificación: `window.process` y `require` no existen en la consola del renderer
+- [x] 7.2 Completar la CSP de `src/renderer/index.html` y comprobar el HMR; si no funciona, inyectar una variante para desarrollo — verificación: `npm run dev` con HMR y la consola sin violaciones de CSP
+- [x] 7.3 Denegar permisos salvo `clipboard-sanitized-write` (`setPermissionRequestHandler` y `setPermissionCheckHandler`) y bloquear `will-attach-webview` y ventanas nuevas — verificación: test o comprobación manual de que otros permisos se deniegan
+- [x] 7.4 Mantener `repoPath()`, `safeResolve` (para `file()` y el sandbox de ACP), `validChange`, `MAX_DOC_BYTES` y `capped()` — verificación: pasan `sandbox.test.ts`, `schemas.test.ts` y los demás tests del núcleo
+- [x] 7.5 (verificado solo en Windows) Configurar los fuses de Electron (`RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments` desactivados; `EnableEmbeddedAsarIntegrityValidation`, `OnlyLoadAppFromAsar` activados) — verificación: `npx @electron/fuses read` sobre el paquete muestra los valores esperados y lanzar la app instalada con `ELECTRON_RUN_AS_NODE=1` arranca la aplicación normal, no un intérprete de Node.js
+- [x] 7.6 Escribir la sección Security del README — verificación: describe sin puerto ni autenticación de red, IPC validado y permisos de los agentes
+- [x] 7.7 Aceptación de la fase — verificación: checklist de seguridad de Electron revisada punto por punto en `design.md`, consola del renderer sin advertencias de seguridad y tests de `isTrustedSender` en verde
 
 ## 8. Empaquetado y firma (L)
 

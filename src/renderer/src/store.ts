@@ -9,6 +9,7 @@ import type {
   SpecSummary,
   LifecycleAction,
   LoggedEvent,
+  MenuAction,
   RepoInfo,
   ReviewComment,
   ReviewRound,
@@ -17,6 +18,7 @@ import type {
   SessionState,
   Workspace
 } from '@shared/protocol.ts'
+import type { ToolStatus } from '@shared/ipc.ts'
 import { api } from './lib/api.ts'
 
 const ls = {
@@ -54,6 +56,8 @@ interface State {
   agents: AgentInfo[]
   defaultAgent: string
   platform: string
+  /** external CLIs from config() (Fase 6): warnings and the diagnostics dialog */
+  tools: ToolStatus[]
   roots: RootInfo[]
   reposLoaded: boolean
   repos: RepoInfo[]
@@ -80,6 +84,8 @@ interface State {
   focusComment: string | null
   toasts: Toast[]
   addFolderOpen: boolean
+  /** Ayuda → Diagnóstico de dependencias (Fase 6); the Help menu opens it */
+  diagOpen: boolean
   /** a turn finished while the tab was in the background (cleared when it gets focus) */
   doneUnseen: boolean
 }
@@ -89,6 +95,7 @@ export const useStore = create<State>(() => ({
   agents: [],
   defaultAgent: '',
   platform: '',
+  tools: [],
   roots: [],
   reposLoaded: false,
   repos: [],
@@ -112,6 +119,7 @@ export const useStore = create<State>(() => ({
   focusComment: null,
   toasts: [],
   addFolderOpen: false,
+  diagOpen: false,
   doneUnseen: false
 }))
 const set = useStore.setState
@@ -157,6 +165,7 @@ const appendEvent = (list: LoggedEvent[], e: LoggedEvent) =>
 let refreshTimer: ReturnType<typeof setTimeout> | undefined
 function onServer(m: ServerMsg) {
   if (m.type === 'error') return toast(m.message, 'error')
+  if (m.type === 'menu') return menuAction(m.action) // Fase 4: menú nativo → renderer
   if (m.repo !== get().repo) return
   switch (m.type) {
     case 'session':
@@ -248,7 +257,8 @@ export async function boot() {
       agents: cfg.agents,
       defaultAgent: cfg.defaultAgent,
       agent: get().agent || cfg.defaultAgent,
-      platform: cfg.platform
+      platform: cfg.platform,
+      tools: cfg.tools ?? []
     })
   await loadRepos()
   const last = ls.get('repo')
@@ -295,6 +305,13 @@ export async function browseRoot(): Promise<boolean> {
 }
 
 export const openAddFolder = (open = true) => set({ addFolderOpen: open })
+
+/**
+ * Open/close the dependency diagnostics dialog (Fase 6). Exported so the Help
+ * menu entry (wired to the native menu by the orchestrator, Fase 4 owns
+ * menu.ts) can reach it, like openAddFolder.
+ */
+export const openDiagnostics = (open = true) => set({ diagOpen: open })
 
 export async function removeRoot(path: string) {
   const w = await guard(api.removeRoot(path))
@@ -598,3 +615,20 @@ export function setTheme(t: 'light' | 'dark' | 'system') {
 }
 export const initialTheme = () =>
   (ls.get('theme') as 'light' | 'dark' | 'system' | null) ?? 'system'
+
+/** Menu actions (ServerMsg 'menu', Fase 4.6). Fase 5 sustituye 'add-folder' por el
+ *  selector nativo (pickFolder) y cablea 'demo-repo' (5.7) y 'open-data-folder' (5.8);
+ *  Fase 6 'dependency-diagnostics' (6.4); Fase 9 'check-updates' (9.4). */
+export function menuAction(action: MenuAction) {
+  switch (action) {
+    case 'add-folder':
+      openAddFolder(true)
+      break
+    case 'rescan-repos':
+      loadRepos(true)
+      break
+    default:
+      // marcador para Fases 5/6/9: la acción llegó, su implementación aún no existe
+      toast(`Acción de menú «${action}» pendiente de su fase`)
+  }
+}
