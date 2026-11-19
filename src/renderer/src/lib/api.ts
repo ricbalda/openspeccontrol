@@ -28,5 +28,12 @@ export const api = {
   patchComment: (id: string, patch: CommentPatchBody) => window.osc.patchComment(id, patch),
   deleteComment: (id: string) => window.osc.deleteComment(id),
   sendReview: (repo: string, change: string) => window.osc.sendReview(repo, change),
-  closeRound: (repo: string, change: string) => window.osc.closeRound(repo, change)
+  closeRound: (repo: string, change: string) => window.osc.closeRound(repo, change),
+  // Fase 5: native integrations
+  pickFolder: () => window.osc.pickFolder(),
+  notify: (n: Parameters<typeof window.osc.notify>[0]) => window.osc.notify(n),
+  openExternal: (url: string) => window.osc.openExternal(url),
+  setNativeTheme: (t: 'light' | 'dark' | 'system') => window.osc.setNativeTheme(t),
+  openDataFolder: () => window.osc.openDataFolder(),
+  showInExplorer: (repo: string) => window.osc.showInExplorer(repo)
 }

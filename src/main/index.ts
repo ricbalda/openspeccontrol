@@ -5,6 +5,8 @@ import { SERVER_MSG_CHANNEL } from '@shared/ipc.ts'
 import type { ServerMsg } from '@shared/protocol.ts'
 import { createOscCore, type OscCore } from './core/osc-core.ts'
 import { registerIpc, type IpcBridge } from './ipc.ts'
+import { registerNativeIpc } from './desktop/ipc-native.ts'
+import { trackPendingInteractions } from './desktop/badge.ts'
 import { APP_NAME, APP_USER_MODEL_ID, installAppMenu } from './desktop/menu.ts'
 import { confirmQuit, liveWork } from './desktop/safe-close.ts'
 import { attachRendererHealth } from './desktop/renderer-health.ts'
@@ -26,8 +28,9 @@ import {
 // Fase 2: the core is created at startup (data dir, Studio import, db) and shut
 // down on quit (agents, watchers, WAL checkpoint). Fase 3 registers the IPC
 // bridge. Fase 4: single instance, window state, safe close, menu, renderer
-// health and the app identity. Fase 6/7: login-shell env and hardening before
-// any child process or window exists.
+// health and the app identity. Fase 5: native integrations (folder picker,
+// notifications, badge, links, theme). Fase 6/7: login-shell env and hardening
+// before any child process or window exists.
 
 let core: OscCore | null = null
 let bridge: IpcBridge | null = null
@@ -138,6 +141,9 @@ if (!app.requestSingleInstanceLock()) {
     applySessionSecurity(session.defaultSession)
     core = createOscCore({ version: app.getVersion() })
     bridge = registerIpc({ core, window: () => mainWindow })
+    // Fase 5: the native-integration channels and the pending-decisions badge
+    registerNativeIpc({ core, win: () => mainWindow })
+    trackPendingInteractions({ core, getWin: () => mainWindow })
     installAppMenu(sendToRenderer) // Fase 4.6 (also removes autoHideMenuBar)
     createWindow()
 

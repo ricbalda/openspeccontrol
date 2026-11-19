@@ -4,6 +4,7 @@ import { gwtKeyword, headingKind, markGwt, markRfc } from '../review/specMarkup.
 import remarkGfm from 'remark-gfm'
 import { Lock } from 'lucide-react'
 import { cx } from '../lib/ui.tsx'
+import { ExternalAnchor } from '../lib/ExternalLink.tsx'
 
 export interface Tab {
   id: string
@@ -40,7 +41,9 @@ const COMPONENTS: Components = {
   h3: deco('h3'),
   h4: deco('h4'),
   p: deco('p'),
-  li: deco('li')
+  li: deco('li'),
+  // Fase 5.5: links open in the OS browser, never inside the window
+  a: ExternalAnchor
 }
 
 /**

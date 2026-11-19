@@ -47,6 +47,7 @@ import { lineHintOf, offsetAtPoint, paint, TextModel } from '../review/textModel
 import { FileDiffCard } from '../review/DiffView.tsx'
 import { ReadOnlyDoc } from './ReadOnlyDoc.tsx'
 import { gwtKeyword, headingKind, markGwt, markRfc } from '../review/specMarkup.tsx'
+import { ExternalAnchor } from '../lib/ExternalLink.tsx'
 import { ArchivedView } from './ArchivedView.tsx'
 import { MissingToolsNote } from './ToolsDialog.tsx'
 import { ValidationPanel } from '../review/ValidationPanel.tsx'
@@ -130,6 +131,8 @@ const Doc = memo(function Doc({
       p: wrap('p'),
       li: wrap('li'),
       blockquote: wrap('blockquote'),
+      // Fase 5.5: links open in the OS browser, never inside the window
+      a: ExternalAnchor,
       pre: ({ node, children, ...rest }: any) => (
         <pre {...rest} data-line={node?.position?.start.line}>
           {children}

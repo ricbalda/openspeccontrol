@@ -42,6 +42,13 @@ const osc: OscApi = {
   git: (repo, scope) => call('git', repo, scope),
   gitBranch: (repo, change) => call('gitBranch', repo, change),
   gitCommit: (b) => call('gitCommit', b),
+  // Fase 5: native integrations (dialog, notifications, links, theme, folders)
+  pickFolder: () => call('pickFolder'),
+  notify: (n) => call('notify', n),
+  openExternal: (url) => call('openExternal', url),
+  setNativeTheme: (t) => call('setNativeTheme', t),
+  openDataFolder: () => call('openDataFolder'),
+  showInExplorer: (repo) => call('showInExplorer', repo),
   send: (msg) => {
     ipcRenderer.send(CLIENT_MSG_CHANNEL, msg)
   },

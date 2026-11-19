@@ -95,6 +95,7 @@ export class OscCore {
       onEvent: (repo, entry) => this.broadcast(repo, { type: 'event', repo, entry }),
       onState: (repo, session) => {
         this.broadcast(repo, { type: 'session', repo, session })
+        this.notifySessionObservers(repo, session)
         this.syncWatcher(repo)
       }
     })
@@ -405,6 +406,24 @@ export class OscCore {
 
   private broadcast(repo: string, m: ServerMsg) {
     this.subscribers.get(repo)?.forEach((s) => s.send(m))
+  }
+
+  // ---- session observers (Fase 5: the pending-decisions badge) -----------------
+
+  private sessionObservers = new Set<(repo: string, session: SessionState | null) => void>()
+
+  /**
+   * Observe every session state change without subscribing to a repo (the
+   * desktop badge sums pendingInteractions across all repos). Returns the off
+   * switch.
+   */
+  onSessionChange(cb: (repo: string, session: SessionState | null) => void): () => void {
+    this.sessionObservers.add(cb)
+    return () => this.sessionObservers.delete(cb)
+  }
+
+  private notifySessionObservers(repo: string, session: SessionState | null): void {
+    for (const cb of this.sessionObservers) cb(repo, session)
   }
 
   // watch <repo>/openspec while anyone looks at the repo or an agent runs there

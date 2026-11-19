@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Compass,
   FolderGit2,
+  FolderOpen,
   GitBranch,
   GitMerge,
   MessageSquare,
@@ -34,6 +35,7 @@ import {
   removeRoot,
   runAction,
   selectRepo,
+  showRepoInExplorer,
   useStore
 } from '../store.ts'
 import { issueCounts } from '../review/ValidationPanel.tsx'
@@ -75,37 +77,44 @@ function RepoPicker() {
   }
   return (
     <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2 text-left shadow-sm hover:border-line-strong"
-      >
-        <FolderGit2 size={17} className="shrink-0 text-accent" />
-        <span className="min-w-0 flex-1">
-          <span className="block text-[11px] text-muted">Repository</span>
-          <span className="block truncate text-[13.5px] font-semibold" title={cur?.id}>
-            {cur?.name ?? 'Choose a repo'}
-          </span>
-          {cur && git?.repo && (
-            <span
-              className={cx(
-                'flex min-w-0 items-center gap-1 font-mono text-[11px]',
-                git.onBase || !git.branch ? 'text-warn' : 'text-muted'
-              )}
-              title={
-                !git.branch
-                  ? 'HEAD is detached: commits will not be on any branch'
-                  : git.onBase
-                    ? `On ${git.branch}, the main branch: changes and builds land on it directly. Work on a branch per change.`
-                    : `Current branch: ${git.branch}`
-              }
-            >
-              <GitBranch size={11} className="shrink-0" />{' '}
-              <span className="min-w-0 truncate">{git.branch ?? 'detached HEAD'}</span>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex w-full items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2 text-left shadow-sm hover:border-line-strong"
+        >
+          <FolderGit2 size={17} className="shrink-0 text-accent" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] text-muted">Repository</span>
+            <span className="block truncate text-[13.5px] font-semibold" title={cur?.id}>
+              {cur?.name ?? 'Choose a repo'}
             </span>
-          )}
-        </span>
-        <ChevronDown size={15} className="text-muted" />
-      </button>
+            {cur && git?.repo && (
+              <span
+                className={cx(
+                  'flex min-w-0 items-center gap-1 font-mono text-[11px]',
+                  git.onBase || !git.branch ? 'text-warn' : 'text-muted'
+                )}
+                title={
+                  !git.branch
+                    ? 'HEAD is detached: commits will not be on any branch'
+                    : git.onBase
+                      ? `On ${git.branch}, the main branch: changes and builds land on it directly. Work on a branch per change.`
+                      : `Current branch: ${git.branch}`
+                }
+              >
+                <GitBranch size={11} className="shrink-0" />{' '}
+                <span className="min-w-0 truncate">{git.branch ?? 'detached HEAD'}</span>
+              </span>
+            )}
+          </span>
+          <ChevronDown size={15} className="text-muted" />
+        </button>
+        {cur && (
+          <IconButton title={`Show ${cur.name} in the file manager`} onClick={showRepoInExplorer}>
+            <FolderOpen size={14} />
+          </IconButton>
+        )}
+      </div>
       {open && (
         <div className="absolute inset-x-0 z-40 mt-1 w-[min(420px,calc(100vw-24px))] rounded-xl border border-line bg-surface shadow-pop">
           <div className="flex items-center gap-2 border-b border-line px-2.5 py-2">
