@@ -46,6 +46,7 @@ import { KINDS, STATUS_META, TO_CHECK } from '../review/kinds.tsx'
 import { lineHintOf, offsetAtPoint, paint, TextModel } from '../review/textModel.ts'
 import { FileDiffCard } from '../review/DiffView.tsx'
 import { ReadOnlyDoc } from './ReadOnlyDoc.tsx'
+import { DraftEditor } from './DraftEditor.tsx'
 import { gwtKeyword, headingKind, markGwt, markRfc } from '../review/specMarkup.tsx'
 import { ExternalAnchor } from '../lib/ExternalLink.tsx'
 import { ArchivedView } from './ArchivedView.tsx'
@@ -732,6 +733,10 @@ export function DocReview() {
       </Empty>
     )
   }
+
+  // fase 5 (design D-6): un borrador abierto en el editor del panel central;
+  //  antes de la comprobación de OpenSpec: los borradores son por repositorio
+  if (browse?.kind === 'draft') return <DraftEditor key={browse.id} id={browse.id} />
 
   if (browse?.kind === 'spec') {
     const sp = specs.find((x) => x.name === browse.name)
