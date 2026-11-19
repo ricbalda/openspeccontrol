@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import type { AgentEvent, LoggedEvent, ReviewComment, ReviewRound } from '@shared/protocol.ts'
+import type { CliView } from './openspec.ts'
 import { dataDir } from './repos.ts'
 
 // The database is opened explicitly with openDb() (createOscCore does it, after
@@ -38,6 +39,9 @@ export function openDb(
       json TEXT NOT NULL, snapshot TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS rounds_by_change ON rounds (repo, change, created_at);
+    CREATE TABLE IF NOT EXISTS cli_views (
+      repo TEXT PRIMARY KEY, sig TEXT NOT NULL, json TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
   `)
   return _db
 }
@@ -168,6 +172,28 @@ export const rounds = {
       (r) => JSON.parse(r.json) as ReviewRound
     )
     return all.find((r) => r.status === 'running') ?? null
+  }
+}
+
+// ---- CLI view snapshots (tarea 11.5) -------------------------------------------
+// The last change-list view the openspec CLI confirmed for a repo, keyed by the
+// artifact signature it answered for. The CLI takes seconds on a big repo; a
+// restart reuses the snapshot when the files have not changed (same signature)
+// and a stale-while-revalidate refresh covers the rest. Lives in the app's own
+// database, never in the user's repo.
+
+export const cliViews = {
+  get(repo: string): { sig: string; view: CliView } | null {
+    const r = get().prepare('SELECT sig, json FROM cli_views WHERE repo = ?').get(repo) as any
+    return r ? { sig: r.sig, view: JSON.parse(r.json) } : null
+  },
+  put(repo: string, sig: string, view: CliView) {
+    get()
+      .prepare(
+        `INSERT INTO cli_views VALUES (?, ?, ?, ?)
+      ON CONFLICT (repo) DO UPDATE SET sig = excluded.sig, json = excluded.json, updated_at = excluded.updated_at`
+      )
+      .run(repo, sig, JSON.stringify(view), new Date().toISOString())
   }
 }
 

@@ -1,0 +1,201 @@
+{
+  "when": "2026-11-19T21:11:05.427Z",
+  "env": {
+    "os": "Windows_NT 10.0.26300 (win32/x64)",
+    "cpu": "13th Gen Intel(R) Core(TM) i7-1355U × 12",
+    "ramGb": 32,
+    "node": "v26.13.1",
+    "openspec": "2.0.0",
+    "electron": "Electron/45.3.4"
+  },
+  "fixture": {
+    "changes": 2,
+    "archived": 120,
+    "specs": 25,
+    "repos": 61,
+    "comments": 3000,
+    "rounds": 200
+  },
+  "limits": {
+    "railMs": 2000,
+    "railGoalMs": 1200,
+    "timerGapMs": 500,
+    "longTaskMs": 250
+  },
+  "rail": {
+    "firstPaintMs": 141,
+    "confirmedMs": 1969,
+    "changesColdMs": [
+      66,
+      74,
+      80
+    ],
+    "changesColdConfirmedMs": [
+      1584,
+      2378,
+      1560
+    ],
+    "changesWarmMs": [
+      88,
+      78,
+      75,
+      74,
+      64
+    ],
+    "repoScanMs": [
+      13,
+      11,
+      11
+    ],
+    "reloadPaintMs": 1228,
+    "verdict": true,
+    "meetsGoal": true
+  },
+  "session": {
+    "emitted": 2500,
+    "idleBaseline": {
+      "ipcMedianMs": 1,
+      "timerMaxGapMs": 7
+    },
+    "stream": {
+      "events": 2502,
+      "kinds": {
+        "turn_end": 1,
+        "update": 2500,
+        "user": 1
+      },
+      "visibility": "visible",
+      "streamMs": 3617,
+      "longTasks": 14,
+      "longestTaskMs": 82,
+      "blockedMs": 171,
+      "timerMaxGapMs": 88,
+      "timerGapsOver100ms": 0,
+      "ipcPings": 59,
+      "ipcMedianMs": 732,
+      "ipcP95Ms": 3430,
+      "ipcMaxMs": 3634
+    },
+    "transcriptRendered": true,
+    "verdict": true
+  },
+  "replay": {
+    "entries": 2000,
+    "receivedMs": 89,
+    "longestTaskMs": 50,
+    "timerMaxGapMs": 89,
+    "verdict": true
+  },
+  "ok": true,
+  "problems": [],
+  "runs": [
+    {
+      "run": 1,
+      "when": "2026-11-19T21:12:10.309Z",
+      "firstPaintMs": 327,
+      "confirmedMs": 2540,
+      "changesColdMs": [
+        100,
+        70,
+        82
+      ],
+      "changesColdConfirmedMs": [
+        1290,
+        1239,
+        2409
+      ],
+      "changesWarmMs": [
+        81,
+        98,
+        94,
+        107,
+        114
+      ],
+      "repoScanMs": [
+        14,
+        12,
+        14
+      ],
+      "reloadPaintMs": 1399,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 3727,
+        "longestTaskMs": 130,
+        "timerMaxGapMs": 242
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "when": "2026-11-19T21:07:21.270Z",
+      "firstPaintMs": 114,
+      "confirmedMs": 1191,
+      "changesColdMs": [
+        59,
+        56,
+        78
+      ],
+      "changesColdConfirmedMs": [
+        1462,
+        1223,
+        1217
+      ],
+      "changesWarmMs": [
+        38,
+        29,
+        44,
+        47,
+        40
+      ],
+      "repoScanMs": [
+        8,
+        8,
+        7
+      ],
+      "reloadPaintMs": 816,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 1974,
+        "longestTaskMs": 0,
+        "timerMaxGapMs": 92
+      },
+      "ok": true
+    },
+    {
+      "run": 3,
+      "when": "2026-11-19T21:11:05.427Z",
+      "firstPaintMs": 141,
+      "confirmedMs": 1969,
+      "changesColdMs": [
+        66,
+        74,
+        80
+      ],
+      "changesColdConfirmedMs": [
+        1584,
+        2378,
+        1560
+      ],
+      "changesWarmMs": [
+        88,
+        78,
+        75,
+        74,
+        64
+      ],
+      "repoScanMs": [
+        13,
+        11,
+        11
+      ],
+      "reloadPaintMs": 1228,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 3617,
+        "longestTaskMs": 82,
+        "timerMaxGapMs": 88
+      },
+      "ok": true
+    }
+  ]
+}

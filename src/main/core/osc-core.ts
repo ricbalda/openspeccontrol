@@ -20,7 +20,7 @@ import type {
   Workspace
 } from '@shared/protocol.ts'
 import { agents, DEFAULT_AGENT, getAgent } from './agents.ts'
-import { closeDb, comments, events, migrateRepoIds, openDb, rounds } from './db.ts'
+import { cliViews, closeDb, comments, events, migrateRepoIds, openDb, rounds } from './db.ts'
 import { Hub } from './acp/hub.ts'
 import * as openspec from './openspec.ts'
 import { hasOpenSpec, initDataDir, oscVersion, safeResolve, setVersion } from './repos.ts'
@@ -82,6 +82,9 @@ export type GitCommitInput = z.output<typeof gitCommitBody>
 export type SettingsInput = z.output<typeof settingsBody>
 export type CommentCreateInput = z.output<typeof commentCreate>
 export type CommentPatchInput = z.output<typeof commentPatch>
+
+/** Delay before a background CLI refresh starts, so it does not compete with the paint. */
+const REFRESH_DEFER_MS = 300
 
 export class OscCore {
   private subscribers = new Map<string, Set<Subscriber>>() // repo -> subscribers
@@ -162,17 +165,51 @@ export class OscCore {
 
   async changes(repo: string) {
     const { repo: r, abs } = this.repoOf(repo)
-    const [active, archived] = await Promise.all([
-      openspec.listChanges(abs, (ch) => comments.list(r, ch)),
-      openspec.listArchived(abs)
-    ])
-    return {
-      active,
-      archived,
+    const empty = {
       specs: openspec.listSpecs(abs),
       workflows: openspec.installedWorkflows(abs),
       reviewInRepo: reviewInRepo(r)
     }
+    if (!fs.existsSync(path.join(abs, 'openspec', 'changes')))
+      return { ...empty, active: [], archived: [], stale: false, refreshError: null }
+    // tarea 11.5: answer with what is already known — the CLI cache, the
+    // persisted snapshot (same signature) or a local inference — and confirm a
+    // stale view in the background; changes_updated then tells the renderer to
+    // fetch again. Waiting for the CLI here cost ~2 s per cold refresh.
+    const cur = openspec.currentView(abs)
+    if (cur.stale) this.refreshInBackground(r, abs)
+    const [active, archived] = await Promise.all([
+      openspec.listChanges(abs, (ch) => comments.list(r, ch), {
+        view: cur.view,
+        provisional: cur.stale
+      }),
+      openspec.listArchived(abs)
+    ])
+    return {
+      ...empty,
+      active,
+      archived,
+      stale: cur.stale,
+      refreshError: cur.refreshError
+    }
+  }
+
+  /** One background refresh per repo; subscribers hear changes_updated when it settles. */
+  private refreshing = new Set<string>()
+  private refreshInBackground(repo: string, abs: string) {
+    if (this.stopping || this.refreshing.has(repo)) return
+    this.refreshing.add(repo)
+    // deferred: the three CLI processes would compete for CPU with the very paint
+    // this refresh follows (measured: first paint of 40 changes varied 0.3-1.1 s)
+    void new Promise<void>((resolve) => setTimeout(resolve, REFRESH_DEFER_MS))
+      .then(() => (this.stopping ? 'backoff' : openspec.refreshView(abs)))
+      .then((outcome) => {
+        // 'backoff' (same content just failed) changes nothing: stay quiet, or
+        // the message → refetch → refresh cycle would spin on a broken CLI
+        if (!this.stopping && outcome !== 'backoff')
+          this.broadcast(repo, { type: 'changes_updated', repo })
+      })
+      .finally(() => this.refreshing.delete(repo))
   }
 
   file(repo: string, file: unknown): { content: string } {
@@ -579,6 +616,7 @@ export class OscCore {
     // chokidar polling (WSL /mnt/*) keeps timers alive until closed
     await Promise.allSettled([...this.watchers.values()].map((w) => w.close()))
     this.watchers.clear()
+    openspec.bindViewStore(null) // a late CLI answer must not write to the closed db
     closeDb() // checkpoints the WAL
   }
 
@@ -663,6 +701,8 @@ export function createOscCore(opts: OscCoreOptions = {}): OscCore {
   if (!imported.imported && imported.reason && imported.reason !== 'source not found')
     console.warn(imported.reason) // start with empty data; retry by deleting the data dir
   openDb(env.OSC_DB || path.join(dir, 'openspeccontrol.db'))
+  // tarea 11.5: the CLI's confirmed views survive restarts in the app's db
+  openspec.bindViewStore(cliViews)
   loadWorkspaceConfig(env.REPOS_ROOT ?? null)
   migrateLegacy(env.REPOS_ROOT ?? null)
   closeStaleRounds(repoPath, rounds.repos())

@@ -82,6 +82,15 @@ export interface OscChanges {
   specs: SpecSummary[]
   workflows: OptionalWorkflow[]
   reviewInRepo: boolean
+  /**
+   * tarea 11.5: true while `active` is a local inference (the CLI has not
+   * confirmed this content yet). A background refresh is running and the
+   * `changes_updated` message tells the renderer to fetch again; the UI marks
+   * the list so inferred data is never read as definitive.
+   */
+  stale?: boolean
+  /** why the last refresh of a stale view failed (set together with stale) */
+  refreshError?: string | null
 }
 
 /** Which change's pending files a git query is about. */

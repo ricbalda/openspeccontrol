@@ -13,7 +13,7 @@ no se ha extrapolado nada a macOS ni a Linux.
 | 11.2 Tests nuevos de cada fase | **Hecha**: `osc-core` (9), `legacy-import` (5), `ipc` (18), `updater` (21), `shell-env` (13), `tools` (5) existen y pasan; no faltaba ninguno | [INVENTARIO-TESTS.md](INVENTARIO-TESTS.md) |
 | 11.3 E2E de humo por CDP | **Hecha**: 9/9 pasos, con captura | `test/e2e/smoke.mjs`, `test/e2e/captures/` |
 | 11.4 Matriz manual 3 SO × 4 agentes | **No ejecutable aquí**: checklist preparada, todo «no ejecutado» | [MATRIZ-MANUAL.md](MATRIZ-MANUAL.md) |
-| 11.5 Rendimiento | **Sesión de >2000 eventos: dentro de umbral, tras corregir un bug real** (antes: página congelada ~80 s). **Rail: NO cumple el umbral de 2 s de forma holgada con 40 cambios en frío** (mediana 1,88 s de primera carga, 2,0–3,1 s al refrescar tras un cambio en disco; sí cumple con ≤ 20 cambios) | secciones 11.5 y `test/e2e/perf-results-*.json` |
+| 11.5 Rendimiento | **Sesión de >2000 eventos: dentro de umbral, tras corregir un bug real** (antes: página congelada ~80 s). **Rail: cumple con holgura** (tarea 11.5 «rail perf», medido «antes/después» con 7 ejecuciones): pinta 40 cambios en mediana 323 ms (máx. 594 ms; antes mediana 1862 ms) y el refresco en frío baja de ~2,7 s a ≤ 255 ms; la vista validada del CLI llega en segundo plano a los ~2–3 s, marcada «calculando» mientras tanto (sección 11.5-A) | secciones 11.5 y `test/e2e/perf-results-*.json` |
 | 11.6 Aceptación | **No cumplida** (depende de 11.4) | [MATRIZ-MANUAL.md](MATRIZ-MANUAL.md) |
 
 ## Bugs encontrados y arreglados (cambios fuera de `test/` y `scripts/`)
@@ -68,7 +68,10 @@ código 1 si falta, falla o queda vacío algún test exigido. Resultado:
   nuevos de esta fase son de los dos arreglos y de 11.5).
 - `specMarkup` del renderer es `.test.tsx` (el inventario acepta `.ts` y `.tsx`).
 - `workspace` sin `browse`: `test/main/workspace.test.ts` no menciona `browse`.
-- **No verificado en Windows:** `changes-cache.test.ts` se omite entero en Windows
+- **Actualización (tarea 11.5 «rail perf»):** `changes-cache.test.ts` ya corre en Windows (4 casos; el
+  CLI falso es un script node tras un shim `.cmd`) y se añadieron tests que no dependen de ningún
+  shell. `INVENTARIO-TESTS.md` (generado) no se ha regenerado: su fila de `changes-cache` es anterior.
+- **No verificado en Windows (estado de la Fase 11 original):** `changes-cache.test.ts` se omitía entero en Windows
   (`describe.skipIf(process.platform === 'win32')`: usa un `openspec` falso de shell). Su resultado
   depende de la CI en macOS/Linux. Tampoco se ejecuta `wsl-unc.test.ts` (2 casos) por no haber un
   recurso `\\wsl.localhost\…` configurado en esta máquina.
@@ -132,29 +135,101 @@ Requiere agent-browser, el CLI `openspec` y Node ≥ 22.18 (importa `src/main/co
 base con el esquema real). Variables: `PERF_CHANGES`, `PERF_ARCHIVED`, `PERF_SPECS`, `PERF_REPOS`,
 `PERF_COMMENTS`, `PERF_EVENTS`, `CDP_PORT`, `KEEP_TMP=1`.
 
-### A) Rail con una base grande — **no cumple el umbral de 2 s con holgura**
+### A) Rail con una base grande — **cumple con holgura: pinta 40 cambios en ~0,3 s (antes ~1,9 s)**
 
-Base: un repo con **40 cambios activos** (todos con propuesta, diseño, spec delta y tareas), 120
-archivados y 25 specs, 60 repos más en `REPOS_ROOT`, **3000 comentarios** y **200 rondas** en la db.
-La primera carga es el clic en el repo hasta que el rail pinta los 40 cambios; arranca el CLI de
-OpenSpec (tres llamadas en paralelo: `list`, `status --all`, `validate`).
+Base: un repo con **40 cambios activos** (todos con `.openspec.yaml`, propuesta, diseño, spec delta y
+tareas), 120 archivados y 25 specs, 60 repos más en `REPOS_ROOT`, **3000 comentarios** y **200 rondas**
+en la db. «Primera carga» = clic en el repo hasta que el rail pinta los 40 cambios; «refresco en
+frío» = `window.osc.changes()` tras tocar un archivo bajo `openspec/` (invalida la caché por firma de
+artefactos).
 
-| Cambios | Primera carga (ms) | `changes()` en frío tras tocar un archivo, 3 medidas (ms) | `changes()` en caliente (ms) | Escaneo de repos (ms) |
-| ---: | ---: | --- | --- | --- |
-| 40 (7 ejecuciones) | 1834 · 1842 · 1871 · 1881 · 1950 · 1974 · **2216** (mediana **1881**) | 2004–3066 (mediana ≈ 2400) | 45–96 | 4–8 |
-| 20 | 1401 | 1380 · 2070 · 1726 | 35–43 | 4–5 |
-| 10 | 1269 | 1111 · 1681 · 1518 | 35–38 | 5–6 |
-| 2 (base mínima) | 935 | 883 · 1250 · 1188 | 5–8 | 1–2 |
+**Metodología de la ronda 3 (tarea 11.5 «rail perf»).** «Antes» y «después» medidos por el mismo
+agente, en la misma máquina y el mismo día (2026-11-19), con el mismo `perf.mjs` y puerto CDP 9303: el
+«antes» es `HEAD` (`b2d470c`) exportado a un directorio temporal y construido aparte; el «después» es
+este árbol. Ejecuciones secuenciales (nunca dos a la vez). Las ejecuciones en que Chromium estranguló
+la ventana (hueco de timers ≈ 1000 ms con 0 tareas largas: ventana oculta/ocluida; solo afecta a la
+sección B) se repitieron: pasó en torno a 1 de cada 4 ejecuciones (también en el «antes»: 1 de 7 con
+40 cambios y 1 de 2 con 2). Las tablas incluyen solo ejecuciones con la ventana visible; el rail se
+mide en el mismo ciclo, pero esas ejecuciones no se usan como evidencia.
 
-Lectura: con 40 cambios la primera carga queda en torno a 1,9 s (6 de 7 ejecuciones por debajo de 2 s,
-con un margen de apenas 6 %, y una a 2,2 s) y el refresco tras un cambio en disco supera 2 s; con ≤ 20
-cambios y en las recargas con caché (≈ 50 ms) cumple con holgura. **El tiempo es del CLI de OpenSpec,
-no de la app**: las tres llamadas juntas tardan 1,84 s sobre esa misma base (`openspec --version` solo
-ya cuesta ≈ 0,2 s en esta máquina) y lo demás (comentarios, specs, IPC y pintado) suma ~0,05–0,1 s.
-Veredicto honesto: umbral **no demostrado** para una base de 40 cambios en frío; no es un bug que se
-arregle con un cambio mínimo.
-Opciones para decidir (no aplicadas): persistir la última vista del CLI y pintarla enseguida mientras
-se refresca (stale-while-revalidate), o pintar con `list` y completar `status`/`validate` después.
+**Antes** (`HEAD`; `changes()` esperaba a las tres llamadas paralelas del CLI: `list`,
+`status --all`, `validate`):
+
+| Cambios | Ejecuciones | Primera carga (ms) | `changes()` en frío (ms) |
+| ---: | ---: | --- | --- |
+| 40 | 7 | 1633 · 1640 · 1811 · 1862 · 2121 · 2367 · **2789** (mediana **1862**) | 2037–4714 (21 medidas, mediana **2652**) |
+| 20 | 2 | 1367 · 1687 | 1574–2072 |
+| 2 | 2 | 1154 · 1621 | 1031–2156 |
+
+**Diseño aplicado** (combinación de las dos opciones del informe original):
+
+1. **Pintado progresivo con inferencia local.** Lo que `openspec list` y `openspec status` calculan
+   para el esquema por defecto (`spec-driven`) es función pura de los archivos: progreso de tareas =
+   contar casillas de `tasks.md` (misma expresión regular que el CLI, `task-progress.js` 2.0.0), estado
+   de artefactos = existencia de archivos sobre el grafo proposal → specs/design → tasks, y
+   `lastModified` = mtime más nuevo. `changes()` deriva esa vista en ~100 ms (40 cambios) y responde ya;
+   el rail pinta al instante con la marca visible «Checking changes with the openspec CLI…».
+   `validate` es lo único no inferible: la vista provisional lleva `validation: null` y **ningún cambio
+   aparece «ready» sin validar** (la etapa se recorta a «review» mientras la vista no esté confirmada).
+   Un esquema distinto de `spec-driven` (carpeta `openspec/schemas/`, `schema:` ajeno en `config.yaml`
+   o en el `.openspec.yaml` del cambio) desactiva la inferencia del grafo (sin inventar): esos cambios
+   salen sin chips hasta que el CLI responde.
+2. **stale-while-revalidate persistente.** La última vista confirmada del CLI se guarda por repo en la
+   db de la app (tabla `cli_views`, en `OSC_DATA`, nunca en el repo del usuario) junto a la firma de
+   artefactos con la que se calculó. Misma firma ⇒ misma respuesta del CLI: tras reiniciar la app el
+   rail pinta ya confirmado, sin arrancar procesos.
+3. **Refresco en segundo plano.** Con firma distinta, `changes()` responde la inferencia y el core
+   lanza (una vez por repo, deduplicado) las tres llamadas del CLI **300 ms después** (así no compiten
+   por CPU con el propio pintado: sin el diferido la primera carga variaba 303–1077 ms en 10
+   ejecuciones; con él, 271–594 ms). Al terminar emite el mensaje nuevo `changes_updated` (en
+   `protocol.ts`) y el renderer vuelve a pedir: la vista confirmada sustituye a la inferida. Si el CLI
+   falla, el aviso «Couldn't confirm with the openspec CLI — showing local state» sustituye al
+   indicador, y un *backoff* de 15 s impide el bucle mensaje → refetch → respawn con un CLI roto.
+
+La invalidación existente no cambia: el vigilante de archivos y la firma de artefactos siguen
+mandando; escribir el historial de revisión (`.openspeccontrol-review.json`) sigue sin disparar el CLI.
+
+**Después** (este árbol, mismas condiciones):
+
+| Cambios | Ejecuciones | Primera carga (ms) | Vista confirmada por el CLI (ms) | `changes()` en frío (ms) | en caliente (ms) |
+| ---: | ---: | --- | --- | --- | --- |
+| 40 | 7 | 271 · 277 · 304 · 323 · 394 · 456 · **594** (mediana **323**) | 2033–3238 (med. 2213) | 72–255 (21 medidas, med. **140**) | 56–235 |
+| 20 | 3 | 171 · 244 · 258 | 1649–2119 | 68–173 | 44–140 |
+| 10 | 3 | 121 · 175 · 179 | 1386–1608 | 48–98 | 28–92 |
+| 2 | 3 | 114 · 141 · 327 | 1191–2540 | 56–100 | 29–114 |
+
+- «Vista confirmada» = cuánto tarda la vista validada del CLI en sustituir a la inferida (tras el
+  clic; con 40 cambios incluye los 300 ms de diferido). La física del CLI (~0,7 s por proceso, más la
+  validación) no cambia: lo que cambia es que ya no bloquea el pintado. Mientras tanto el rail es útil
+  y está marcado como «calculando», nunca como definitivo. En el refresco en frío, la confirmación
+  tardó 1923–3236 ms (mediana 2406).
+- Recargar la página con el repo ya confirmado restaura el rail en 859–1631 ms con 40 cambios
+  (arranque completo del renderer incluido; se informa, no puntúa).
+- Coste síncrono medido en el proceso principal con 40 cambios: firma 17–35 ms, inferencia 80–125 ms,
+  `listChanges` 44–64 ms (≈ 200 ms por `changes()` en frío; es lo que domina el «en frío» de arriba).
+
+**Correspondencia con el CLI real.** `test/main/changes-parity.test.ts` compara, con el `openspec`
+2.0.0 del PATH, la vista inferida con la del CLI en 7 situaciones (solo propuesta, sin diseño,
+planificado sin tareas, en curso con CRLF y marcadores mixtos `[x] [X] [~]`, terminado, `skip_specs`,
+solo `tasks.md`): progreso, estado, `lastModified` (±2 s), artefactos y `isPlanningComplete`/`isComplete`
+coinciden. Esa prueba cazó un fallo real del diseño anterior: `openspec new change` escribe
+`schema: spec-driven` en cada `.openspec.yaml` y la inferencia lo tomaba por «esquema propio», así que
+en cambios reales no habría inferido ningún artefacto (la fixture de `perf.mjs` no creaba ese archivo y
+no lo detectaba; ahora sí lo crea).
+
+**Veredicto: cumple con holgura.** Primera carga de 40 cambios: mediana 323 ms, máximo 594 ms en 7
+ejecuciones (objetivo < 1,2 s, umbral 2 s). Refresco en frío: máximo 255 ms. Lo que sigue por encima de
+1 s es solo la confirmación del CLI en segundo plano (2,0–3,2 s con 40 cambios). Matices honestos:
+(1) durante esos ~2 s el rail muestra el estado «calculando»: sin validación y con las etapas
+recortadas a «review»; (2) un esquema propio del repo no tiene chips de artefactos hasta que el CLI
+responde; (3) la inferencia solo es exacta para `spec-driven`: un esquema global de usuario que
+sobrescriba `spec-driven` por nombre no se detecta (se corregiría solo al llegar el CLI, ≈ 2 s);
+(4) medido solo en Windows 11 con una CPU de portátil; en macOS/Linux no se ha medido.
+Resultados por ejecución en `test/e2e/perf-results-{2,10,20,40}-cambios.json` (campo `runs`; el resto
+del archivo es la última ejecución). Prueba visual (agent-browser por CDP 9303, sesión `perf13`, 40
+cambios): marca «calculando» a los 193 ms con los 40 cambios pintados, desaparece a los 1447 ms al
+confirmar el CLI; abrir un cambio muestra su propuesta; sin errores de consola/página; capturas
+`test/e2e/captures/rail-40-calculando.png` y `rail-40-confirmado-cambio-abierto.png`.
 
 ### B) Sesión de más de 2000 eventos — **cumple tras el arreglo 1**
 
@@ -182,6 +257,13 @@ congelada).
   alta; con `PRAGMA synchronous = NORMAL` serían ≈ 0,07 ms). No se ha tocado: es una decisión de
   durabilidad de la db, y 2500 altas repartidas en segundos no bloquean (ver benchmark).
 
+**Regresión tras el cambio del rail (tarea 11.5 «rail perf»)**, mismas ejecuciones que las tablas de A
+(solo ventana visible): con 40 cambios y el código final, 2500 eventos en 2174–3306 ms (mediana 2704;
+«antes» con el mismo `perf.mjs` en `HEAD`: 2383–3456, mediana 2906 en las 6 de 7 marcadas «visible»), hueco
+máximo de timers 97–171 ms (antes 49–267 ms; dos de las siete ejecuciones del «antes» dieron ~1000 ms
+por estrangulamiento de la ventana) y tarea más larga 50–155 ms (antes 0–135 ms): no empeora de forma
+apreciable y sigue muy por debajo de los umbrales (500 ms / 250 ms).
+
 ### Benchmarks sin Electron (corren en `npm test`)
 
 - `test/main/perf-core.test.ts`: 2500 eventos por hub → db → suscriptor con un agente falso, midiendo el
@@ -193,9 +275,18 @@ congelada).
 ## Archivos
 
 Nuevos, dentro del alcance: `test/e2e/{lib,smoke,perf,fake-acp-agent}.mjs`, `test/e2e/captures/*.png`,
-`test/e2e/perf-results-{10,20,40}-cambios.json`, `test/INVENTARIO-TESTS.md` (generado),
+`test/e2e/perf-results-{2,10,20,40}-cambios.json`, `test/INVENTARIO-TESTS.md` (generado),
 `test/MATRIZ-MANUAL.md`, este informe, `scripts/test-inventory.mjs`, y los tests
 `test/main/{hub-stop,perf-core,perf-events-log}.test.ts` y `test/renderer/event-batching.test.ts`.
+
+Tarea 11.5 (rail rápido, rondas 2 y 3), dentro del alcance que la tarea da: `src/main/core/{openspec,osc-core,db}.ts`
+(inferencia local, refresco en segundo plano diferido 300 ms, tabla `cli_views`, esquema `spec-driven` explícito),
+`src/shared/{protocol,ipc}.ts` (mensaje `changes_updated`, campos `stale`/`refreshError` de `OscChanges`),
+`src/renderer/src/store.ts` y `src/renderer/src/panes/RepoSection.tsx` (marca «calculando» / aviso de fallo),
+`test/e2e/perf.mjs` (mide pintado y confirmación por separado; variables `AB_SESSION` y `PERF_OUT`; la fixture
+crea `.openspec.yaml`), `test/e2e/perf-results-{2,10,20,40}-cambios.json` (con el campo `runs`), las capturas
+`test/e2e/captures/rail-40-*.png`, y los tests `test/main/{changes-cache,changes-view,osc-changes-refresh,changes-parity}.test.ts`
+(`changes-parity` compara la inferencia con el CLI real) y `test/renderer/{changes-stale.test.ts,repoRail-stale.test.tsx}`.
 
 **Fuera del alcance (arreglos mínimos justificados arriba):** `src/renderer/src/store.ts` (+35/−4) y
 `src/main/core/acp/hub.ts` (+6/−1). No se ha tocado `openspec/**`, `Docs/**`, `CLAUDE.md` ni

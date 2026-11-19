@@ -1,5 +1,5 @@
 {
-  "when": "2026-11-19T01:39:08.355Z",
+  "when": "2026-11-19T21:05:37.087Z",
   "env": {
     "os": "Windows_NT 10.0.26300 (win32/x64)",
     "cpu": "13th Gen Intel(R) Core(TM) i7-1355U × 12",
@@ -18,35 +18,44 @@
   },
   "limits": {
     "railMs": 2000,
+    "railGoalMs": 1200,
     "timerGapMs": 500,
     "longTaskMs": 250
   },
   "rail": {
-    "firstPaintMs": 1950,
+    "firstPaintMs": 304,
+    "confirmedMs": 2193,
     "changesColdMs": [
-      2262,
-      2574,
-      2583
+      91,
+      97,
+      255
+    ],
+    "changesColdConfirmedMs": [
+      2287,
+      2502,
+      2490
     ],
     "changesWarmMs": [
-      96,
-      72,
-      71,
-      71,
-      74
+      115,
+      137,
+      65,
+      78,
+      86
     ],
     "repoScanMs": [
-      6,
       8,
-      7
+      6,
+      8
     ],
-    "verdict": false
+    "reloadPaintMs": 1044,
+    "verdict": true,
+    "meetsGoal": true
   },
   "session": {
     "emitted": 2500,
     "idleBaseline": {
       "ipcMedianMs": 1,
-      "timerMaxGapMs": 9
+      "timerMaxGapMs": 6
     },
     "stream": {
       "events": 2502,
@@ -56,29 +65,281 @@
         "user": 1
       },
       "visibility": "visible",
-      "streamMs": 2952,
-      "longTasks": 7,
-      "longestTaskMs": 75,
-      "blockedMs": 64,
-      "timerMaxGapMs": 123,
-      "timerGapsOver100ms": 1,
-      "ipcPings": 51,
-      "ipcMedianMs": 391,
-      "ipcP95Ms": 2734,
-      "ipcMaxMs": 2936
+      "streamMs": 2370,
+      "longTasks": 1,
+      "longestTaskMs": 50,
+      "blockedMs": 0,
+      "timerMaxGapMs": 97,
+      "timerGapsOver100ms": 0,
+      "ipcPings": 46,
+      "ipcMedianMs": 129,
+      "ipcP95Ms": 2145,
+      "ipcMaxMs": 2345
     },
     "transcriptRendered": true,
     "verdict": true
   },
   "replay": {
     "entries": 2000,
-    "receivedMs": 85,
+    "receivedMs": 62,
     "longestTaskMs": 0,
-    "timerMaxGapMs": 50,
+    "timerMaxGapMs": 35,
     "verdict": true
   },
-  "ok": false,
-  "problems": [
-    "rail por encima de 2000 ms"
+  "ok": true,
+  "problems": [],
+  "runs": [
+    {
+      "run": 1,
+      "when": "2026-11-19T21:03:05.243Z",
+      "firstPaintMs": 277,
+      "confirmedMs": 2106,
+      "changesColdMs": [
+        92,
+        72,
+        78
+      ],
+      "changesColdConfirmedMs": [
+        1923,
+        1973,
+        2144
+      ],
+      "changesWarmMs": [
+        69,
+        61,
+        57,
+        59,
+        59
+      ],
+      "repoScanMs": [
+        6,
+        5,
+        8
+      ],
+      "reloadPaintMs": 917,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 2174,
+        "longestTaskMs": 63,
+        "timerMaxGapMs": 145
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "when": "2026-11-19T21:03:26.789Z",
+      "firstPaintMs": 271,
+      "confirmedMs": 2033,
+      "changesColdMs": [
+        102,
+        92,
+        86
+      ],
+      "changesColdConfirmedMs": [
+        2442,
+        2603,
+        2312
+      ],
+      "changesWarmMs": [
+        78,
+        87,
+        73,
+        72,
+        68
+      ],
+      "repoScanMs": [
+        6,
+        6,
+        6
+      ],
+      "reloadPaintMs": 859,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 3134,
+        "longestTaskMs": 155,
+        "timerMaxGapMs": 171
+      },
+      "ok": true
+    },
+    {
+      "run": 3,
+      "when": "2026-11-19T21:03:50.588Z",
+      "firstPaintMs": 323,
+      "confirmedMs": 2213,
+      "changesColdMs": [
+        107,
+        145,
+        87
+      ],
+      "changesColdConfirmedMs": [
+        1929,
+        1980,
+        2406
+      ],
+      "changesWarmMs": [
+        71,
+        61,
+        85,
+        75,
+        77
+      ],
+      "repoScanMs": [
+        7,
+        7,
+        6
+      ],
+      "reloadPaintMs": 1273,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 2654,
+        "longestTaskMs": 82,
+        "timerMaxGapMs": 109
+      },
+      "ok": true
+    },
+    {
+      "run": 4,
+      "when": "2026-11-19T21:11:29.654Z",
+      "firstPaintMs": 394,
+      "confirmedMs": 2828,
+      "changesColdMs": [
+        174,
+        214,
+        182
+      ],
+      "changesColdConfirmedMs": [
+        2693,
+        2870,
+        3236
+      ],
+      "changesWarmMs": [
+        177,
+        108,
+        160,
+        104,
+        149
+      ],
+      "repoScanMs": [
+        11,
+        10,
+        10
+      ],
+      "reloadPaintMs": 1631,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 3306,
+        "longestTaskMs": 65,
+        "timerMaxGapMs": 112
+      },
+      "ok": true
+    },
+    {
+      "run": 5,
+      "when": "2026-11-19T21:04:46.466Z",
+      "firstPaintMs": 594,
+      "confirmedMs": 3238,
+      "changesColdMs": [
+        211,
+        140,
+        160
+      ],
+      "changesColdConfirmedMs": [
+        2333,
+        2728,
+        2625
+      ],
+      "changesWarmMs": [
+        183,
+        235,
+        226,
+        152,
+        153
+      ],
+      "repoScanMs": [
+        11,
+        7,
+        10
+      ],
+      "reloadPaintMs": 1101,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 2704,
+        "longestTaskMs": 53,
+        "timerMaxGapMs": 107
+      },
+      "ok": true
+    },
+    {
+      "run": 6,
+      "when": "2026-11-19T21:05:12.870Z",
+      "firstPaintMs": 456,
+      "confirmedMs": 2875,
+      "changesColdMs": [
+        164,
+        165,
+        141
+      ],
+      "changesColdConfirmedMs": [
+        2231,
+        2531,
+        2098
+      ],
+      "changesWarmMs": [
+        155,
+        103,
+        101,
+        86,
+        56
+      ],
+      "repoScanMs": [
+        5,
+        8,
+        5
+      ],
+      "reloadPaintMs": 878,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 2791,
+        "longestTaskMs": 79,
+        "timerMaxGapMs": 147
+      },
+      "ok": true
+    },
+    {
+      "run": 7,
+      "when": "2026-11-19T21:05:37.087Z",
+      "firstPaintMs": 304,
+      "confirmedMs": 2193,
+      "changesColdMs": [
+        91,
+        97,
+        255
+      ],
+      "changesColdConfirmedMs": [
+        2287,
+        2502,
+        2490
+      ],
+      "changesWarmMs": [
+        115,
+        137,
+        65,
+        78,
+        86
+      ],
+      "repoScanMs": [
+        8,
+        6,
+        8
+      ],
+      "reloadPaintMs": 1044,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 2370,
+        "longestTaskMs": 50,
+        "timerMaxGapMs": 97
+      },
+      "ok": true
+    }
   ]
 }

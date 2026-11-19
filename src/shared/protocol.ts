@@ -275,6 +275,11 @@ export type ServerMsg =
   | { type: 'replay'; repo: string; entries: LoggedEvent[] }
   | { type: 'artifacts_changed'; repo: string; path: string }
   | { type: 'review_changed'; repo: string; change: string }
+  | {
+      /** tarea 11.5: the background CLI refresh of a stale change list settled */
+      type: 'changes_updated'
+      repo: string
+    }
   | { type: 'error'; message: string }
   | { type: 'menu'; action: MenuAction }
   | { type: 'update_state'; state: UpdateState }

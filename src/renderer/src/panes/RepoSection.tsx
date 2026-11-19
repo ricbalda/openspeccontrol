@@ -9,6 +9,7 @@ import {
   Eye,
   GitBranch,
   GitMerge,
+  Loader2,
   MessageSquare,
   MoreHorizontal,
   Pencil,
@@ -498,6 +499,13 @@ export function RepoSection({
   const changesLoaded = useStore((s) =>
     s.repo === id ? s.changesLoaded : (s.views[id]?.changesLoaded ?? false)
   )
+  // tarea 11.5: inferred (not yet confirmed) list, and why a refresh failed
+  const changesStale = useStore((s) =>
+    s.repo === id ? s.changesStale : (s.views[id]?.changesStale ?? false)
+  )
+  const changesError = useStore((s) =>
+    s.repo === id ? s.changesError : (s.views[id]?.changesError ?? null)
+  )
   const [filter, setFilter] = useState('')
   const name = info?.name ?? id
   const branch = git?.repo ? git.branch : null
@@ -557,6 +565,25 @@ export function RepoSection({
       </div>
       {!collapsed && info?.openspec && (
         <div className="space-y-3 px-2 pb-2.5">
+          {changesLoaded && changesError && (
+            <div
+              className="flex items-start gap-1.5 rounded-lg bg-surface-2 px-2 py-1 text-[11px] text-warn"
+              title={changesError}
+            >
+              <ShieldAlert size={12} className="mt-px shrink-0" />
+              <span>Couldn&apos;t confirm with the openspec CLI — showing local state.</span>
+            </div>
+          )}
+          {changesLoaded && !changesError && changesStale && (
+            <div
+              className="flex items-center gap-1.5 px-1 text-[11px] text-muted"
+              data-stale-changes=""
+              title="The list is read from the repo folder; the openspec CLI (validation, exact artifact states) is still checking and will replace it"
+            >
+              <Loader2 size={11} className="animate-spin" />
+              Checking changes with the openspec CLI…
+            </div>
+          )}
           <NewChangeButton onClick={() => onNewChange(id)} />
           {!changesLoaded &&
             [0, 1].map((i) => (
