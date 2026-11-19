@@ -2,11 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
+    <!-- Hardened runtime: lo mínimo que necesita V8 de Electron (JIT y memoria
+         ejecutable sin firmar). Sin cámara, micrófono, Documentos ni Descargas.
+         No se declara allow-dyld-environment-variables: los fuses ya
+         deshabilitan NODE_OPTIONS y la app no carga bibliotecas nativas propias. -->
     <key>com.apple.security.cs.allow-jit</key>
     <true/>
     <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
-    <true/>
-    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
     <true/>
   </dict>
 </plist>
