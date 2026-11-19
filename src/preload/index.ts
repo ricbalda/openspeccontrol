@@ -42,6 +42,14 @@ const osc: OscApi = {
   git: (repo, scope) => call('git', repo, scope),
   gitBranch: (repo, change) => call('gitBranch', repo, change),
   gitCommit: (b) => call('gitCommit', b),
+  // add-proposal-drafts: borradores de proposal
+  drafts: (repo, query) => call('drafts', repo, query),
+  draft: (id) => call('draft', id),
+  createDraft: (repo) => call('createDraft', repo),
+  saveDraft: (id, patch) => call('saveDraft', id, patch),
+  duplicateDraft: (id) => call('duplicateDraft', id),
+  deleteDraft: (id) => call('deleteDraft', id),
+  sendDraft: (id, mode) => call('sendDraft', id, mode),
   // Fase 5: native integrations (dialog, notifications, links, theme, folders)
   pickFolder: () => call('pickFolder'),
   notify: (n) => call('notify', n),
