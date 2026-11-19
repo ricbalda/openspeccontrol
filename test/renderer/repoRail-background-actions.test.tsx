@@ -86,6 +86,8 @@ const view = (over: Partial<RepoView> = {}): RepoView => ({
   browse: null,
   git: null,
   changesLoaded: false,
+  changesStale: false,
+  changesError: null,
   change: null,
   file: null,
   ...over

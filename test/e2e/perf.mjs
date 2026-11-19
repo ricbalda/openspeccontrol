@@ -8,9 +8,11 @@
 //
 //  A) Rail con una base grande — un repo con 40 cambios activos, 120 archivados y
 //     25 specs, 60 repos más en REPOS_ROOT y 3000 comentarios + 200 rondas en la db.
-//     Se mide desde el clic en el repo hasta que el rail pinta los 40 cambios (primera
-//     carga: arranca el CLI de OpenSpec) y las recargas siguientes (caché de la vista
-//     del CLI). Umbral del plan: < 2 s.
+//     Desde el clic en el repo se mide CUÁNDO pintan los 40 cambios (tarea 11.5:
+//     al instante, con la vista inferida localmente y la marca «calculando») y
+//     cuándo los sustituye la vista confirmada del CLI (refresco en segundo
+//     plano). Lo mismo al refrescar en frío tras tocar un archivo en disco.
+//     Umbral del plan: pintar en < 2 s (objetivo: < 1,2 s percibido).
 //
 //  B) Sesión con más de 2000 eventos — el agente falso (fake-acp-agent.mjs, definido
 //     en agents.json de la app) emite 2500 `session/update` por el camino real
@@ -27,7 +29,7 @@
 //
 // Escribe test/e2e/perf-results-<N>-cambios.json.
 // Variables: PERF_CHANGES (40), PERF_ARCHIVED (120), PERF_SPECS (25), PERF_REPOS (60),
-// PERF_COMMENTS (3000), PERF_EVENTS (2500), CDP_PORT, KEEP_TMP=1.
+// PERF_COMMENTS (3000), PERF_EVENTS (2500), CDP_PORT, AB_SESSION, PERF_OUT, KEEP_TMP=1.
 
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -56,6 +58,7 @@ const N_EVENTS = Number(process.env.PERF_EVENTS) || 2500
 
 const LIMITS = {
   railMs: 2000,
+  railGoalMs: 1200, // objetivo de la tarea 11.5: percibido, con holgura
   timerGapMs: 500,
   longTaskMs: 250
 }
@@ -81,6 +84,11 @@ function buildBigRepo(sb) {
   const changeFiles = Object.entries(files).filter(([rel]) => rel.startsWith(base))
   for (let i = 1; i <= N_CHANGES; i++) {
     const name = `bulk-change-${String(i).padStart(3, '0')}`
+    // `openspec new change` deja este archivo en cada cambio real
+    write(
+      path.join(repo, 'openspec', 'changes', name, '.openspec.yaml'),
+      `schema: spec-driven\ncreated: ${today}\n`
+    )
     for (const [rel, text] of changeFiles) {
       write(
         path.join(repo, rel.replace('add-hello-endpoint', name)),
@@ -291,7 +299,7 @@ async function main() {
     limits: LIMITS
   }
   const problems = []
-  const ab = createDriver()
+  const ab = createDriver(process.env.AB_SESSION)
   let app = null
   try {
     app = await launchApp(sb)
@@ -305,7 +313,9 @@ async function main() {
     const countChanges = `document.querySelectorAll('[title^="bulk-change-"]').length`
     ab.clickText('Choose a repo')
     await waitFor('lista de repos', () => ab.eval(`document.body.innerText.includes('big-app')`))
-    log('A) primera carga del rail (arranca el CLI de OpenSpec)…')
+    log(
+      `A) primera carga del rail: pinta al instante con la vista local (marca «calculando») y el CLI confirma en segundo plano…`
+    )
     const cold = ab.eval(`(async () => {
       const btn = [...document.querySelectorAll('button')].find((b) => b.innerText.includes('big-app'))
       const t0 = performance.now()
@@ -314,7 +324,13 @@ async function main() {
         if (performance.now() - t0 > 60000) return { timeout: true, cards: ${countChanges} }
         await new Promise((r) => setTimeout(r, 5))
       }
-      return { ms: Math.round(performance.now() - t0) }
+      const paintedMs = Math.round(performance.now() - t0)
+      // la vista confirmada sustituye a la inferida: la marca desaparece
+      while (document.querySelector('[data-stale-changes]') !== null) {
+        if (performance.now() - t0 > 60000) return { timeout: true, cards: ${countChanges}, paintedMs }
+        await new Promise((r) => setTimeout(r, 5))
+      }
+      return { ms: paintedMs, confirmedMs: Math.round(performance.now() - t0) }
     })()`)
     if (cold.timeout) throw new Error(`el rail no pintó los ${N_CHANGES} cambios (${cold.cards})`)
     const api = (call) =>
@@ -325,24 +341,60 @@ async function main() {
     for (let i = 0; i < 5; i++) warm.push(api(`window.osc.changes(${JSON.stringify(repoId)})`))
     const scans = []
     for (let i = 0; i < 3; i++) scans.push(api(`window.osc.repos(true)`))
-    // invalida la caché del CLI tocando un archivo bajo openspec/ y vuelve a pedir
+    // invalida la caché del CLI tocando un archivo bajo openspec/ y vuelve a pedir:
+    // la respuesta es inmediata (vista inferida); se espera además a la confirmación
     const colds = []
+    const coldConfirmed = []
     for (let i = 0; i < 3; i++) {
       fs.appendFileSync(
         path.join(repoDir, 'openspec', 'changes', 'bulk-change-001', 'tasks.md'),
         `\n<!-- ${i} -->\n`
       )
       colds.push(api(`window.osc.changes(${JSON.stringify(repoId)})`))
+      coldConfirmed.push(
+        ab.eval(`(async () => {
+          const t = performance.now()
+          for (;;) {
+            const r = await window.osc.changes(${JSON.stringify(repoId)})
+            if (!r.stale) return Math.round(performance.now() - t)
+            if (performance.now() - t > 60000) return -1
+            await new Promise((r2) => setTimeout(r2, 50))
+          }
+        })()`)
+      )
+    }
+    // recarga de la página con el repo ya confirmado: restauración del rail
+    // (performance.now() en el documento nuevo cuenta desde la navegación)
+    ab.reload()
+    let reloadPaintMs = null
+    try {
+      await waitFor(
+        'rail tras recargar',
+        () =>
+          ab.eval(
+            `${countChanges} >= ${N_CHANGES} && !document.querySelector('[data-stale-changes]') ? 1 : null`
+          ),
+        { timeoutMs: 30_000, intervalMs: 50 }
+      )
+      reloadPaintMs = ab.eval(`Math.round(performance.now())`)
+    } catch {
+      reloadPaintMs = null
     }
     results.rail = {
       firstPaintMs: cold.ms,
+      confirmedMs: cold.confirmedMs,
       changesColdMs: colds,
+      changesColdConfirmedMs: coldConfirmed,
       changesWarmMs: warm,
       repoScanMs: scans,
-      verdict: cold.ms < LIMITS.railMs && Math.max(...colds) < LIMITS.railMs
+      reloadPaintMs,
+      verdict: cold.ms < LIMITS.railMs && Math.max(...colds) < LIMITS.railMs,
+      // the goal covers what the user perceives: first paint and cold refresh.
+      // reloadPaintMs (full page boot + rail restore) is reported, not gated.
+      meetsGoal: cold.ms < LIMITS.railGoalMs && Math.max(...colds) < LIMITS.railGoalMs
     }
     log(
-      `A) rail: primera carga ${cold.ms} ms; changes() en frío ${colds.join('/')} ms, en caliente ${warm.join('/')} ms; escaneo ${scans.join('/')} ms`
+      `A) rail: pinta ${cold.ms} ms, confirmado a los ${cold.confirmedMs} ms; changes() en frío ${colds.join('/')} ms (confirmado ${coldConfirmed.join('/')} ms), en caliente ${warm.join('/')} ms; escaneo ${scans.join('/')} ms; recarga ${reloadPaintMs} ms`
     )
     if (!results.rail.verdict) problems.push(`rail por encima de ${LIMITS.railMs} ms`)
 
@@ -441,7 +493,8 @@ async function main() {
   }
   results.ok = problems.length === 0
   results.problems = problems
-  const out = path.join(ROOT, 'test', 'e2e', `perf-results-${N_CHANGES}-cambios.json`)
+  const out =
+    process.env.PERF_OUT || path.join(ROOT, 'test', 'e2e', `perf-results-${N_CHANGES}-cambios.json`)
   fs.writeFileSync(out, `${JSON.stringify(results, null, 2)}\n`)
   log(`resultados en ${path.relative(ROOT, out)}`)
   console.log(

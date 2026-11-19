@@ -1,5 +1,5 @@
 {
-  "when": "2026-11-19T01:33:25.269Z",
+  "when": "2026-11-19T21:09:08.463Z",
   "env": {
     "os": "Windows_NT 10.0.26300 (win32/x64)",
     "cpu": "13th Gen Intel(R) Core(TM) i7-1355U × 12",
@@ -18,15 +18,38 @@
   },
   "limits": {
     "railMs": 2000,
+    "railGoalMs": 1200,
     "timerGapMs": 500,
     "longTaskMs": 250
   },
   "rail": {
-    "firstPaintMs": 1401,
-    "changesColdMs": [1380, 2070, 1726],
-    "changesWarmMs": [43, 39, 41, 38, 35],
-    "repoScanMs": [5, 4, 5],
-    "verdict": false
+    "firstPaintMs": 258,
+    "confirmedMs": 2119,
+    "changesColdMs": [
+      173,
+      133,
+      99
+    ],
+    "changesColdConfirmedMs": [
+      1949,
+      2655,
+      2228
+    ],
+    "changesWarmMs": [
+      134,
+      140,
+      129,
+      139,
+      131
+    ],
+    "repoScanMs": [
+      13,
+      10,
+      14
+    ],
+    "reloadPaintMs": 1145,
+    "verdict": true,
+    "meetsGoal": true
   },
   "session": {
     "emitted": 2500,
@@ -42,27 +65,137 @@
         "user": 1
       },
       "visibility": "visible",
-      "streamMs": 2490,
-      "longTasks": 9,
-      "longestTaskMs": 73,
-      "blockedMs": 128,
-      "timerMaxGapMs": 131,
+      "streamMs": 3170,
+      "longTasks": 10,
+      "longestTaskMs": 88,
+      "blockedMs": 106,
+      "timerMaxGapMs": 161,
       "timerGapsOver100ms": 1,
-      "ipcPings": 48,
-      "ipcMedianMs": 186,
-      "ipcP95Ms": 2284,
-      "ipcMaxMs": 2486
+      "ipcPings": 54,
+      "ipcMedianMs": 567,
+      "ipcP95Ms": 2969,
+      "ipcMaxMs": 3156
     },
     "transcriptRendered": true,
     "verdict": true
   },
   "replay": {
     "entries": 2000,
-    "receivedMs": 75,
-    "longestTaskMs": 0,
-    "timerMaxGapMs": 43,
+    "receivedMs": 101,
+    "longestTaskMs": 55,
+    "timerMaxGapMs": 98,
     "verdict": true
   },
-  "ok": false,
-  "problems": ["rail por encima de 2000 ms"]
+  "ok": true,
+  "problems": [],
+  "runs": [
+    {
+      "run": 1,
+      "when": "2026-11-19T21:06:00.333Z",
+      "firstPaintMs": 171,
+      "confirmedMs": 1782,
+      "changesColdMs": [
+        111,
+        82,
+        68
+      ],
+      "changesColdConfirmedMs": [
+        1647,
+        1544,
+        1543
+      ],
+      "changesWarmMs": [
+        56,
+        115,
+        94,
+        55,
+        79
+      ],
+      "repoScanMs": [
+        11,
+        7,
+        8
+      ],
+      "reloadPaintMs": 812,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 2278,
+        "longestTaskMs": 69,
+        "timerMaxGapMs": 117
+      },
+      "ok": true
+    },
+    {
+      "run": 2,
+      "when": "2026-11-19T21:06:19.579Z",
+      "firstPaintMs": 244,
+      "confirmedMs": 1649,
+      "changesColdMs": [
+        95,
+        95,
+        87
+      ],
+      "changesColdConfirmedMs": [
+        1558,
+        1578,
+        1575
+      ],
+      "changesWarmMs": [
+        45,
+        44,
+        53,
+        71,
+        76
+      ],
+      "repoScanMs": [
+        7,
+        7,
+        6
+      ],
+      "reloadPaintMs": 800,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 2597,
+        "longestTaskMs": 78,
+        "timerMaxGapMs": 177
+      },
+      "ok": true
+    },
+    {
+      "run": 3,
+      "when": "2026-11-19T21:09:08.463Z",
+      "firstPaintMs": 258,
+      "confirmedMs": 2119,
+      "changesColdMs": [
+        173,
+        133,
+        99
+      ],
+      "changesColdConfirmedMs": [
+        1949,
+        2655,
+        2228
+      ],
+      "changesWarmMs": [
+        134,
+        140,
+        129,
+        139,
+        131
+      ],
+      "repoScanMs": [
+        13,
+        10,
+        14
+      ],
+      "reloadPaintMs": 1145,
+      "session": {
+        "visibility": "visible",
+        "streamMs": 3170,
+        "longestTaskMs": 88,
+        "timerMaxGapMs": 161
+      },
+      "ok": true
+    }
+  ]
 }
