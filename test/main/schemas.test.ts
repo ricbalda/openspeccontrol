@@ -43,4 +43,13 @@ describe('request schemas', () => {
     expect(clientMsg.safeParse({ type: 'prompt', repo: '/r', text: 42 }).success).toBe(false)
     expect(clientMsg.safeParse({ type: 'nope', repo: '/r' }).success).toBe(false)
   })
+
+  it('accepts unsubscribe with a repo and rejects it without one (multi-repo-rail, tarea 1.1)', () => {
+    expect(clientMsg.parse({ type: 'unsubscribe', repo: '/r' })).toEqual({
+      type: 'unsubscribe',
+      repo: '/r'
+    })
+    expect(clientMsg.safeParse({ type: 'unsubscribe' }).success).toBe(false)
+    expect(clientMsg.safeParse({ type: 'unsubscribe', repo: '' }).success).toBe(false)
+  })
 })

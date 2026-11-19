@@ -404,6 +404,18 @@ export class OscCore {
     }
   }
 
+  /**
+   * Stop following one repo only (multi-repo rail): the subscriber keeps the
+   * others. The repo's watcher closes when nobody listens and no agent runs
+   * there.
+   */
+  unsubscribeRepo(sub: Subscriber, repo: string): void {
+    const set = this.subscribers.get(repo)
+    if (!set?.delete(sub)) return
+    if (!set.size) this.subscribers.delete(repo)
+    this.syncWatcher(repo)
+  }
+
   private broadcast(repo: string, m: ServerMsg) {
     this.subscribers.get(repo)?.forEach((s) => s.send(m))
   }
@@ -504,6 +516,9 @@ export class OscCore {
           this.subscribe(sub, msg.repo)
           sub.send({ type: 'session', repo: msg.repo, session: s?.state() ?? null })
           sub.send({ type: 'replay', repo: msg.repo, entries: events.list(msg.repo) })
+          break
+        case 'unsubscribe':
+          this.unsubscribeRepo(sub, msg.repo)
           break
         case 'start': {
           const agent = getAgent(msg.agent)

@@ -2,10 +2,10 @@
 
 ## 1. Protocolo y núcleo
 
-- [ ] 1.1 Añadir `{ type: 'unsubscribe'; repo }` a `ClientMsg` en `src/shared/protocol.ts` y su esquema en `src/main/core/schemas.ts` — verificación: `test/main/schemas.test.ts` acepta el mensaje válido y rechaza uno sin `repo`
-- [ ] 1.2 Implementar `OscCore.unsubscribeRepo(sub, repo)` y manejar `unsubscribe` en `handleClientMsg`; el vigilante del repo se detiene si no quedan suscriptores ni agente — verificación: prueba en `test/main/osc-core.test.ts`: tras `unsubscribe` ya no llegan mensajes de ese repo, y siguen llegando los de otro repo suscrito
-- [ ] 1.3 Comprobar que `src/main/ipc.ts` deja pasar el mensaje nuevo por el canal `osc:client-msg` — verificación: `test/main/ipc.test.ts` con un `unsubscribe`
-- [ ] 1.4 Criterio de aceptación de la fase: `npm run typecheck`, `npm run lint` y `npm test` pasan; `grep -n unsubscribe src/shared/protocol.ts src/main/core/osc-core.ts` muestra el mensaje y el método
+- [x] 1.1 Añadir `{ type: 'unsubscribe'; repo }` a `ClientMsg` en `src/shared/protocol.ts` y su esquema en `src/main/core/schemas.ts` — verificación: `test/main/schemas.test.ts` acepta el mensaje válido y rechaza uno sin `repo`
+- [x] 1.2 Implementar `OscCore.unsubscribeRepo(sub, repo)` y manejar `unsubscribe` en `handleClientMsg`; el vigilante del repo se detiene si no quedan suscriptores ni agente — verificación: prueba en `test/main/osc-core.test.ts`: tras `unsubscribe` ya no llegan mensajes de ese repo, y siguen llegando los de otro repo suscrito
+- [x] 1.3 Comprobar que `src/main/ipc.ts` deja pasar el mensaje nuevo por el canal `osc:client-msg` — verificación: `test/main/ipc.test.ts` con un `unsubscribe`
+- [x] 1.4 Criterio de aceptación de la fase: `npm run typecheck`, `npm run lint` y `npm test` pasan; `grep -n unsubscribe src/shared/protocol.ts src/main/core/osc-core.ts` muestra el mensaje y el método
 
 ## 2. Estado por repo en el store
 

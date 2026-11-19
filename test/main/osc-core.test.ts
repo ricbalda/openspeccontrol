@@ -124,6 +124,56 @@ describe('realtime fan-out (task 2.3)', () => {
   })
 })
 
+describe('unsubscribe stops following one repo (multi-repo-rail, tarea 1.2)', () => {
+  let OTHER: string
+
+  beforeAll(() => {
+    OTHER = path.join(WORK, 'other')
+    fs.mkdirSync(path.join(OTHER, 'openspec', 'changes', 'add-y'), { recursive: true })
+    fs.writeFileSync(
+      path.join(OTHER, 'openspec', 'changes', 'add-y', 'proposal.md'),
+      '# Proposal\n'
+    )
+  })
+
+  it('after unsubscribe no messages of that repo arrive; another subscribed repo still does', async () => {
+    const { sub: s, got } = sub(5)
+    core.subscribe(s, APP)
+    core.subscribe(s, OTHER)
+    expect(core.activeWatchers).toBe(2)
+
+    // stop following APP only: its watcher closes (nobody listening, no agent)
+    await core.handleClientMsg(s, { type: 'unsubscribe', repo: APP })
+    expect(core.activeWatchers).toBe(1)
+
+    // session broadcasts: a second subscriber drives the agents (start also
+    // subscribes it to each repo, but never the unsubscribed s)
+    const { sub: driver } = sub(6)
+    core.handleClientMsg(driver, { type: 'start', repo: APP, agent: 'sleeper' }).catch(() => {})
+    core.handleClientMsg(driver, { type: 'start', repo: OTHER, agent: 'sleeper' }).catch(() => {})
+    await new Promise((r) => setTimeout(r, 150))
+
+    const sessionsOf = (repo: string) => got.filter((m) => m.type === 'session' && m.repo === repo)
+    expect(sessionsOf(APP)).toHaveLength(0) // unsubscribed: APP stays quiet for s
+    expect(sessionsOf(OTHER)).not.toHaveLength(0) // the other repo still arrives
+    expect(core.activeWatchers).toBe(2) // an agent (or subscriber) keeps APP watched
+
+    // cleanup: stop the sleepers and drop both subscriptions
+    await core.handleClientMsg(driver, { type: 'stop', repo: APP })
+    await core.handleClientMsg(driver, { type: 'stop', repo: OTHER })
+    core.unsubscribe(s)
+    core.unsubscribe(driver)
+    expect(core.sessionStates()).toHaveLength(0)
+    expect(core.activeWatchers).toBe(0)
+  })
+
+  it('unsubscribeRepo of a repo the subscriber never followed is a no-op', () => {
+    const { sub: s } = sub(7)
+    expect(() => core.unsubscribeRepo(s, APP)).not.toThrow()
+    expect(core.activeWatchers).toBe(0)
+  })
+})
+
 describe('removeRoot stops agents in unreachable repos (task 2.1)', () => {
   it('stops the session of a repo whose folder went away', async () => {
     const { sub: s } = sub(3)

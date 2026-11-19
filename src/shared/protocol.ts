@@ -281,6 +281,8 @@ export type ServerMsg =
 
 export type ClientMsg =
   | { type: 'subscribe'; repo: string }
+  // multi-repo rail: stop following one repo without dropping the others
+  | { type: 'unsubscribe'; repo: string }
   | { type: 'start'; repo: string; agent: AgentId; resume?: boolean }
   | { type: 'stop'; repo: string }
   | { type: 'prompt'; repo: string; text: string }

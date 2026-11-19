@@ -236,4 +236,14 @@ describe('client messages and renderer lifecycle (tareas 3.3 y 3.4)', () => {
     expect(core.activeWatchers).toBe(0)
     destroyed = false
   })
+
+  it('lets an unsubscribe through osc:client-msg and stops the repo watcher (multi-repo-rail, tarea 1.3)', async () => {
+    client(frame, { type: 'subscribe', repo: APP })
+    await settle()
+    expect(core.activeWatchers).toBe(1) // followed through the bridge
+
+    client(frame, { type: 'unsubscribe', repo: APP })
+    await settle()
+    expect(core.activeWatchers).toBe(0) // ...and dropped through the bridge
+  })
 })
