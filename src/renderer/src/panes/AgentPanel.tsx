@@ -118,17 +118,26 @@ export function AgentPanel() {
     })
   }, [items, repo])
 
-  // tab title badge when the agent waits for you
+  // tab title badge when the agent waits for you. multi-repo-rail (D-J): the
+  // count covers every open repo — the active one from its transcript, the
+  // background ones from their sessions' pendingInteractions
   const doneUnseen = useStore((s) => s.doneUnseen)
+  const bgPending = useStore((s) =>
+    s.openRepos.reduce(
+      (n, id) => n + (id === s.repo ? 0 : (s.views[id]?.session?.pendingInteractions ?? 0)),
+      0
+    )
+  )
+  const needsYou = pending.length + bgPending
   useEffect(() => {
-    document.title = pending.length
-      ? `(${pending.length}) Needs you · OpenSpecControl`
+    document.title = needsYou
+      ? `(${needsYou}) Needs you · OpenSpecControl`
       : doneUnseen
         ? '✓ Agent finished · OpenSpecControl'
         : 'OpenSpecControl'
     // the OS notification itself is the main process's job now (Fase 5.3):
     // no permission prompt, no browser Notification API in the renderer
-  }, [pending.length, doneUnseen])
+  }, [needsYou, doneUnseen])
 
   const status = session ? STATUS[session.status] : null
   const agentLabel = agents.find((a) => a.id === (session?.agent ?? agent))?.label ?? agent

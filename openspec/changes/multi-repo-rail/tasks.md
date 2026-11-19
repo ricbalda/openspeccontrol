@@ -28,9 +28,9 @@
 
 ## 4. Avisos en segundo plano
 
-- [ ] 4.1 Los avisos de decisión pendiente y de fin de turno de un repo no activo incluyen el nombre del repo; la ventana con foco no genera notificación del sistema — verificación: prueba de renderer con `window.osc.notify` simulado y `document.hasFocus` en ambos valores
-- [ ] 4.2 El título de la ventana cuenta las decisiones pendientes de todos los repos abiertos — verificación: prueba con dos repos con 1 y 2 decisiones: título «(3) Needs you · OpenSpecControl»
-- [ ] 4.3 Criterio de aceptación de la fase: `npm test` pasa y los avisos del repo único no cambian
+- [x] 4.1 Los avisos de decisión pendiente y de fin de turno de un repo no activo incluyen el nombre del repo; la ventana con foco no genera notificación del sistema — verificación: prueba de renderer con `window.osc.notify` simulado y `document.hasFocus` en ambos valores
+- [x] 4.2 El título de la ventana cuenta las decisiones pendientes de todos los repos abiertos — verificación: prueba con dos repos con 1 y 2 decisiones: título «(3) Needs you · OpenSpecControl»
+- [x] 4.3 Criterio de aceptación de la fase: `npm test` pasa y los avisos del repo único no cambian
 
 ## 5. Verificación de extremo a extremo y documentación
 
