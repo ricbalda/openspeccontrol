@@ -3,10 +3,15 @@ import { join } from 'path'
 import icon from '../../resources/icon.png?asset'
 import { createOscCore, type OscCore } from './core/osc-core.ts'
 import { registerIpc, type IpcBridge } from './ipc.ts'
+import { registerNativeIpc } from './desktop/ipc-native.ts'
+import { installLinkGuard } from './desktop/external-links.ts'
+import { trackPendingInteractions } from './desktop/badge.ts'
 
 // Fase 2: the core is created at startup (data dir, Studio import, db) and shut
 // down on quit (agents, watchers, WAL checkpoint). Fase 3 registers the IPC
-// bridge; window/menu polish (single instance, safe close) in Fase 4.
+// bridge; Fase 5 adds the native integrations (folder picker, notifications,
+// badge, links, theme) and window/menu polish (single instance, safe close)
+// arrives with Fase 4.
 
 let core: OscCore | null = null
 let bridge: IpcBridge | null = null
@@ -27,6 +32,8 @@ function createWindow(): void {
   // the bridge only trusts this window, and drops its subscriptions on
   // reload / destroy / renderer crash (the core then stops idle watchers)
   bridge?.attachWindow(mainWindow)
+  // links never navigate the window: they open in the OS browser or nothing
+  installLinkGuard(mainWindow.webContents)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow!.show()
@@ -46,6 +53,9 @@ function createWindow(): void {
 app.whenReady().then(() => {
   core = createOscCore({ version: app.getVersion() })
   bridge = registerIpc({ core, window: () => mainWindow })
+  // Fase 5: the native-integration channels and the pending-decisions badge
+  registerNativeIpc({ core, win: () => mainWindow })
+  trackPendingInteractions({ core, getWin: () => mainWindow })
   createWindow()
 
   app.on('activate', () => {
