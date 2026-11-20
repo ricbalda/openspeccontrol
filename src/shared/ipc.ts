@@ -147,6 +147,39 @@ export interface DemoRepoOutcome {
 }
 
 /**
+ * Tope que el núcleo aplica al texto de las acciones del agente (el diálogo
+ * **New change** y el envío de borradores comparten). Vive aquí porque también
+ * lo usa el contador del editor de borradores del renderer (design D-4).
+ */
+export const MAX_ACTION_TEXT = 4000
+
+// ---- borradores de proposal (add-proposal-drafts, design D-4) --------------------
+
+/** Cómo se envía un borrador a OpenSpec: los mismos comandos que New change. */
+export type DraftMode = 'explore' | 'propose'
+
+/** Una fila del historial de borradores de un repo: sin contenido. */
+export interface DraftSummary {
+  id: string
+  /** id del repo (ruta absoluta), como el resto de tablas */
+  repo: string
+  title: string
+  status: 'draft' | 'sent'
+  /** con qué modo se envió (solo si status es 'sent') */
+  sentMode: DraftMode | null
+  createdAt: string
+  updatedAt: string
+  sentAt: string | null
+  /** longitud del contenido: para listar sin cargarlo */
+  length: number
+}
+
+/** Un borrador con su contenido en markdown. */
+export interface Draft extends DraftSummary {
+  body: string
+}
+
+/**
  * What `window.osc` exposes: one explicit function per operation plus the
  * realtime pair. The preload implements exactly this; the renderer declares it
  * on `window.osc` (src/preload/index.d.ts). A generic `invoke` is deliberately
@@ -186,6 +219,24 @@ export interface OscApi {
   git(repo: string, scope?: GitScope): Promise<GitInfo>
   gitBranch(repo: string, change: string): Promise<GitInfo>
   gitCommit(b: GitCommitBody): Promise<{ commit: string; files: number }>
+  // ---- add-proposal-drafts: borradores de proposal ------------------------------
+  /** Historial de borradores de un repo (por `updatedAt` descendente), opcionalmente filtrado por título o contenido. */
+  drafts(repo: string, query?: string): Promise<DraftSummary[]>
+  /** Un borrador con su contenido; `not_found` si no existe. */
+  draft(id: string): Promise<Draft>
+  /** Borrador vacío nuevo asociado a un repo. */
+  createDraft(repo: string): Promise<Draft>
+  /** Guarda título y/o contenido; `conflict` si ya está enviado. */
+  saveDraft(id: string, patch: { title?: string; body?: string }): Promise<Draft>
+  /** Copia editable «… (copy)» con fechas nuevas, en el mismo repo. */
+  duplicateDraft(id: string): Promise<Draft>
+  deleteDraft(id: string): Promise<{ ok: true }>
+  /**
+   * Envía el contenido al agente con el comando OpenSpec del modo (igual que
+   * **New change**) y marca el borrador como enviado; `too_large` si supera
+   * `MAX_ACTION_TEXT` y `conflict` si ya está enviado.
+   */
+  sendDraft(id: string, mode: DraftMode): Promise<Draft>
   // ---- Fase 5: native integrations ------------------------------------------------
   /**
    * Native folder picker (`dialog.showOpenDialog`): adds the chosen folder as a

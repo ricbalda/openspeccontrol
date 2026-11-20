@@ -24,12 +24,18 @@ import {
   clientMsg,
   commentCreate,
   commentPatch,
+  createDraftBody,
   describeIssues,
+  draftIdBody,
+  draftsBody,
   gitBranchBody,
   gitCommitBody,
   initBody,
+  parseDraftOrThrow,
   parseOrThrow,
   rootBody,
+  saveDraftBody,
+  sendDraftBody,
   settingsBody
 } from './core/schemas.ts'
 import { detectTools } from './desktop/tools.ts'
@@ -203,6 +209,30 @@ export function registerIpc(opts: { core: OscCore; window: () => WindowRef }): I
     core.gitBranch(parseOrThrow(gitBranchBody, { repo: a[0], change: a[1] }))
   )
   handle('gitCommit', (a) => core.gitCommit(parseOrThrow(gitCommitBody, a[0])))
+
+  // borradores de proposal (add-proposal-drafts): los topes de texto se
+  // rechazan con too_large en vez de recortarse (design D-4); el resto de la
+  // validación es la de siempre
+  handle('drafts', (a) => {
+    const b = parseDraftOrThrow(draftsBody, { repo: a[0], query: a[1] })
+    return core.drafts(b.repo, b.query)
+  })
+  handle('draft', (a) => core.draft(parseDraftOrThrow(draftIdBody, { id: a[0] }).id))
+  handle('createDraft', (a) =>
+    core.createDraft(parseDraftOrThrow(createDraftBody, { repo: a[0] }).repo)
+  )
+  handle('saveDraft', (a) => {
+    const [id, patch] = parseDraftOrThrow(saveDraftBody, a)
+    return core.saveDraft(id, patch)
+  })
+  handle('duplicateDraft', (a) =>
+    core.duplicateDraft(parseDraftOrThrow(draftIdBody, { id: a[0] }).id)
+  )
+  handle('deleteDraft', (a) => core.deleteDraft(parseDraftOrThrow(draftIdBody, { id: a[0] }).id))
+  handle('sendDraft', (a) => {
+    const [id, mode] = parseDraftOrThrow(sendDraftBody, a)
+    return core.sendDraft(id, mode)
+  })
 
   // realtime in: validate with the same clientMsg schema, then hand the message
   // to the core tied to this webContents' subscriber

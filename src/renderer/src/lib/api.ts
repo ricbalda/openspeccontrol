@@ -4,7 +4,7 @@
 // promises with the core's own message (the preload unfolds the envelope).
 
 import type { LifecycleAction } from '@shared/protocol.ts'
-import type { CommentCreateBody, CommentPatchBody, GitCommitBody } from '@shared/ipc.ts'
+import type { CommentCreateBody, CommentPatchBody, DraftMode, GitCommitBody } from '@shared/ipc.ts'
 
 export const api = {
   config: () => window.osc.config(),
@@ -13,6 +13,15 @@ export const api = {
     window.osc.git(repo, scope),
   gitBranch: (repo: string, change: string) => window.osc.gitBranch(repo, change),
   gitCommit: (b: GitCommitBody) => window.osc.gitCommit(b),
+  // add-proposal-drafts: borradores de proposal
+  drafts: (repo: string, query?: string) => window.osc.drafts(repo, query),
+  draft: (id: string) => window.osc.draft(id),
+  createDraft: (repo: string) => window.osc.createDraft(repo),
+  saveDraft: (id: string, patch: { title?: string; body?: string }) =>
+    window.osc.saveDraft(id, patch),
+  duplicateDraft: (id: string) => window.osc.duplicateDraft(id),
+  deleteDraft: (id: string) => window.osc.deleteDraft(id),
+  sendDraft: (id: string, mode: DraftMode) => window.osc.sendDraft(id, mode),
   repos: (refresh = false) => window.osc.repos(refresh),
   addRoot: (path: string) => window.osc.addRoot(path),
   removeRoot: (path: string) => window.osc.removeRoot(path),

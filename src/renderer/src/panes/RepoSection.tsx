@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Archive,
   BookOpen,
@@ -31,8 +31,11 @@ import type {
 } from '@shared/protocol.ts'
 import {
   activateRepo,
+  createDraft,
+  loadDrafts,
   openArchived,
   openChange,
+  openDraft,
   openSpec,
   runAction,
   toggleCollapsed,
@@ -463,6 +466,120 @@ function ArchivedSection({
   )
 }
 
+/** add-proposal-drafts (D-6): espera del buscador de la sección Drafts, en ms. */
+const DRAFT_SEARCH_DEBOUNCE_MS = 250
+
+/**
+ * add-proposal-drafts (D-6): sección Drafts del rail, junto a Specs y Archived y
+ * plegable como ellas. «New draft» crea un borrador de este repo (en un repo en
+ * segundo plano lo activa antes, D-D); el buscador espera 250 ms entre teclas y
+ * la búsqueda sin acentos la resuelve el núcleo (D-2); cada entrada muestra su
+ * título (o «Untitled draft»), la fecha relativa y, si se envió, la insignia
+ * «Sent · explore/propose». Interfaz en inglés, como el resto de la app.
+ */
+function DraftsSection({ repo, current }: { repo: string; current: string | null }) {
+  const [show, setShow] = useState(false)
+  const [q, setQ] = useState('')
+  // undefined = aún sin cargar (sección recién desplegada): ni lista ni avisos
+  const drafts = useStore((s) => s.draftsByRepo[repo])
+  // carga al desplegar y, con 250 ms de espera entre teclas, tras cada consulta
+  useEffect(() => {
+    if (!show) return
+    const t = setTimeout(() => void loadDrafts(repo, q.trim()), q ? DRAFT_SEARCH_DEBOUNCE_MS : 0)
+    return () => clearTimeout(t)
+  }, [show, q, repo])
+  return (
+    <section>
+      <button
+        type="button"
+        onClick={() => setShow(!show)}
+        className="flex items-center gap-1 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted hover:text-fg-2"
+        title="Proposal drafts kept in OpenSpecControl (never written to the repository)"
+      >
+        {show ? <ChevronDown size={12} /> : <ChevronRight size={12} />} Drafts{' '}
+        <span className="font-normal">{drafts?.length ?? 0}</span>
+      </button>
+      {show && (
+        <div className="mt-1.5 space-y-1.5">
+          <Button
+            size="sm"
+            className="w-full"
+            onClick={() => void createDraft(repo)}
+            title="Create an empty draft for this repository and open it in the editor"
+          >
+            <Plus size={13} /> New draft
+          </Button>
+          {drafts && drafts.length > 0 && (
+            <div className="flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1">
+              <Search size={13} className="text-muted" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search drafts…"
+                aria-label="Search drafts"
+                className="min-w-0 flex-1 bg-transparent text-[12.5px] outline-none"
+              />
+              {q && (
+                <button
+                  type="button"
+                  onClick={() => setQ('')}
+                  title="Clear search"
+                  className="text-muted hover:text-fg"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          )}
+          <ul className="space-y-0.5">
+            {(drafts ?? []).map((d) => (
+              <li key={d.id} data-draft-id={d.id}>
+                <button
+                  type="button"
+                  onClick={() => withRepo(repo, () => openDraft(d.id))}
+                  title={d.title || 'Untitled draft'}
+                  className={cx(
+                    'flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left text-[12.5px] hover:bg-surface-2',
+                    current === d.id ? 'bg-accent-soft text-accent' : 'text-fg-2'
+                  )}
+                >
+                  <span className="min-w-0 flex-1 truncate">{d.title || 'Untitled draft'}</span>
+                  {d.status === 'sent' && d.sentMode && (
+                    <Badge tone="ok" className="shrink-0 whitespace-nowrap">
+                      Sent · {d.sentMode}
+                    </Badge>
+                  )}
+                  <span
+                    className="shrink-0 text-[10.5px] tabular-nums text-muted"
+                    title={`Last modified ${d.updatedAt}`}
+                  >
+                    {timeAgo(d.updatedAt)}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {drafts && drafts.length === 0 && !q.trim() && (
+            <div className="px-2 py-2 text-center text-[11px] text-muted">No drafts yet.</div>
+          )}
+          {drafts && drafts.length === 0 && q.trim() && (
+            <div className="px-2 py-2 text-center text-[11px] text-muted">
+              No drafts match &quot;{q.trim()}&quot;.{' '}
+              <button
+                type="button"
+                onClick={() => setQ('')}
+                className="text-accent hover:underline"
+              >
+                Clear search
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
 /**
  * multi-repo-rail (D-F): una sección plegable por repo abierto. La cabecera lleva
  * chevron, nombre, rama, estado del agente y botón de cerrar (la activa, borde de
@@ -651,6 +768,7 @@ export function RepoSection({
               current={browse?.kind === 'archived' ? browse.name : null}
             />
           )}
+          <DraftsSection repo={id} current={browse?.kind === 'draft' ? browse.id : null} />
         </div>
       )}
     </div>

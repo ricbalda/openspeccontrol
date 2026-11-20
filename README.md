@@ -41,7 +41,15 @@ OpenSpecControl helps you turn an idea into an [OpenSpec](https://github.com/Fis
 - Read-only view of the current specs and of archived changes, with the review history OpenSpecControl kept for them.
 - Verify, sync specs and archive steps run from the UI after review and merge.
 
-### 5. Local-first desktop app
+### 5. Drafts: write proposals at your own pace
+
+- Draft proposals per repository in the collapsible **Drafts** section of the rail: create one, keep the history ordered by last modification, and search it by title or content (case- and accent-insensitive, partial words included).
+- The draft editor autosaves about a second after you stop typing — *Saving… / Saved / Not saved*, no save button — and also saves when you switch draft, change, repository or view.
+- Markdown body with **Edit / Preview**, and an `n / 4000` counter: past 4000 characters you can keep writing and saving, but **Explore** and **Propose** stay disabled until you shorten the draft.
+- Send a draft to the agent as **Explore** or **Propose** (`Ctrl/Cmd+Enter` from the editor) with the same native OpenSpec command **New change** uses; once accepted, the draft turns read-only with its mode and date, and **Duplicate** starts a fresh editable copy.
+- Drafts live in the app's database (`~/.openspeccontrol`), never in your repository, and survive restarts and removing or re-adding a repo folder.
+
+### 6. Local-first desktop app
 
 - Native desktop app for Windows, macOS and Linux built with Electron: native folder picker, menus, notifications, safe close and automatic updates.
 - All data stays on your machine: a SQLite database in `~/.openspeccontrol`, no cloud service and no listening port.
