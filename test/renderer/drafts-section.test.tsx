@@ -203,6 +203,24 @@ describe('tarea 4.1: historial de borradores', () => {
     expect(ids).toEqual(['y', 'x']) // orden por modificación descendente
   })
 
+  it('con la sección plegada, el contador refleja los borradores guardados (se cargan al montar)', async () => {
+    arrange(A, [A], { [A]: view({ changesLoaded: true }) })
+    // el núcleo ya tiene un borrador de un arranque anterior; el store aún no lo conoce
+    draftsApi.mockImplementation(async () => [draft('old', { title: 'De ayer' })])
+    const el = renderRail()
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    const sa = el.querySelector<HTMLElement>(`[data-repo="${A}"]`)!
+    const toggle = [...sa.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.trim().startsWith('Drafts')
+    )!
+    expect(toggle.textContent?.replace(/\s+/g, '')).toBe('Drafts1') // sin desplegar
+    expect(sa.querySelector('[data-draft-id="old"]')).toBeNull() // sigue plegada
+    expandDrafts(sa)
+    expect(sa.querySelector('[data-draft-id="old"]')).not.toBeNull()
+  })
+
   it('un título vacío se muestra como «Untitled draft» sin guardarse', () => {
     arrange(A, [A], { [A]: view({ changesLoaded: true }) })
     useStore.setState({

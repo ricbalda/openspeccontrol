@@ -480,14 +480,15 @@ const DRAFT_SEARCH_DEBOUNCE_MS = 250
 function DraftsSection({ repo, current }: { repo: string; current: string | null }) {
   const [show, setShow] = useState(false)
   const [q, setQ] = useState('')
-  // undefined = aún sin cargar (sección recién desplegada): ni lista ni avisos
+  // undefined = aún sin cargar: ni lista ni avisos
   const drafts = useStore((s) => s.draftsByRepo[repo])
-  // carga al desplegar y, con 250 ms de espera entre teclas, tras cada consulta
+  // carga al montar la sección (aunque esté plegada, para que el contador de la
+  // cabecera refleje los borradores reales) y, con 250 ms de espera entre teclas,
+  // tras cada consulta
   useEffect(() => {
-    if (!show) return
     const t = setTimeout(() => void loadDrafts(repo, q.trim()), q ? DRAFT_SEARCH_DEBOUNCE_MS : 0)
     return () => clearTimeout(t)
-  }, [show, q, repo])
+  }, [q, repo])
   return (
     <section>
       <button

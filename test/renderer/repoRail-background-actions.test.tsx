@@ -26,6 +26,7 @@ window.osc = {
     const active = s.repo === repo ? s.changes : (s.views[repo]?.changes ?? [])
     return Promise.resolve({ active, archived: [], specs: [], workflows: [], reviewInRepo: false })
   },
+  drafts: () => Promise.resolve([]),
   git: () => Promise.resolve({ repo: false, branch: null, base: null, onBase: false }),
   file: () => Promise.resolve({ content: '# doc' }),
   review: () => Promise.resolve({ comments: [], rounds: [] }),

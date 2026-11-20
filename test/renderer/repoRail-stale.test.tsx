@@ -17,6 +17,7 @@ const B = 'C:/repos/blog'
 window.osc = {
   send: () => {},
   onMessage: () => () => {},
+  drafts: () => Promise.resolve([]),
   changes: () =>
     Promise.resolve({ active: [], archived: [], specs: [], workflows: [], reviewInRepo: false }),
   git: () => Promise.resolve({ repo: false, branch: null, base: null, onBase: false }),
